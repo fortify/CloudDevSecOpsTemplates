@@ -38,4 +38,4 @@ e. push it to your repository i.e. CodeCommit / GitHub
 
    - commit to your repository i.e. CodeCommit or GitHub
 	
-###Trigger the build, and you are done !!
+### Trigger the build, and you are done !!
