@@ -1,19 +1,23 @@
 version: 0.2
-
+env:
+  variables:
+    APP_NAME: "DVJA-SSC"
+    APP_VERSION: "2.0"
+  parameter-store:
+    FORTIFY_SC_URL: "/fortify/sc_url"
+    FORTIFY_CI_TOKEN: "/fortify/ci_token" 
+    FORTIFY_SC_CLIENT_AUTH: "/fortify/sc_client_auth"
 phases:
   install:
     runtime-versions:
-      java: corretto11
-    commands:
-      # Upgrade AWS CLI to the latest version
-      - pip install --upgrade awscli
+      dotnet: 3.1
   pre_build:
     commands:
-      #- mvn clean compile test
-      - mvn clean
+      - dotnet restore AspNetCoreWebApplication/aspnet-core-dotnet-core.csproj
   build:
     commands:
-      - mvn package
+      - dotnet publish -c release -o ./build_output AspNetCoreWebApplication/aspnet-core-dotnet-core.csproj
+#      - dotnet vstest AspNetCoreWebApplicationTest/bin/release/netcoreapp3.1/AspNetCoreWebApplicationTest.dll
   post_build:
     commands:
       # Do not remove this statement. This command is required for AWS CodeStar projects.
@@ -23,11 +27,12 @@ phases:
       #                     INJECT FORTIFY SAST SCRIPT                                          #
       # FOR SCA = fortify_sast_dotnet_template, FOR SCANCENTRAL = fortify_sc_dotnet_template    #
       ##########################################################################################
-      - bash fortify_sast_dotnet_template.bash
+      - bash ./fortify_sc_dotnet_template.bash
 artifacts:
   files:
-    - 'appspec.yml'
-    - 'template.yml'
-    - 'scripts/*'
-    - 'target/ROOT.war'
-    - 'template-configuration.json'
+    - template.yml
+    - AspNetCoreWebApplication/**/*
+    - scripts/**/*
+    - appspec.yml
+    - requirements.txt
+    - template-configuration.json

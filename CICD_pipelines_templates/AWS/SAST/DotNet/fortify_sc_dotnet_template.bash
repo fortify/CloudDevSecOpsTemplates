@@ -4,64 +4,55 @@
 
 #Parameters Section
 
-#File Server to downloads the required installation files 
-file_server="https://<<FILE SERVER>>/downloads" 				# this could be any file share or SSC server "http://storage.dropbox.com/"
+#download the required tools installation script
+sha256_FTI='05ac617d1e6fde80caa45fa7a1300d34cbd30a714c5276db96cc04876e7646b6'
+fortify_tool_installer='https://raw.githubusercontent.com/fortify/FortifyToolsInstaller/main/FortifyToolsInstaller.sh'  # BASE UTILITY DO NOT CHANGE
 
 #ScanCentral Server details
-sc_server="http://<<SCANCENTRAL URL>>:8280/scancentral-ctrl/" 	# this must be ScanCentral controller URL with trailing slash('/')
-auth_token="<<CI_TOKEN>>"										# authentication token for SSC, this should be CI_TOKEN
-app_name="<<APP_NAME>>"											# application name from SSC
-app_version="<<APP_VERSION>>"									# application version from SSC
-solution_path="<<PATH TO SLN FILE>>"							# path and name of SLN file i.e. /path/mycustomsolution.sln
+sc_server=$FORTIFY_SC_URL										# this must be ScanCentral controller URL with trailing slash('/')
+auth_token=$FORTIFY_CI_TOKEN									# authentication token for SSC, this should be CI_TOKEN
+app_name=$APP_NAME												# application name from SSC
+app_version=$APP_VERSION										# application version from SSC
+sc_client_token=$FORTIFY_SC_CLIENT_AUTH							# ScanCentral Client authentication token
+solution_path='aspnet-core-dotnet-core.sln'
 
 #Parameters to configure installable
-sc_install="Fortify_ScanCentral_Client_21.1.0_x64.zip" 			# installer file name, this may change based on version of installer. 
-sc_client_config="client.properties"							#configuration to authenticate to scancentral controller
+fti_install='FortifyToolsInstaller.sh'
 #End of Parameters Section
 
 #Download required files, please ensure the URL is available
-wget "$file_server/$sc_install" 
-e=$?        # return code last command
-if [ "${e}" -ne "0" ]; then
-	echo "ERROR: Can;t downloads the requierd files from server, can not continue - exit code ${e}"
-	exit 100
-fi
-
-wget "$file_server/$sc_client_config" 
+wget "$fortify_tool_installer" 
 e=$?        # return code last command
 if [ "${e}" -ne "0" ]; then
 	echo "ERROR: Can;t downloads the requierd files from server, can not continue - exit code ${e}"
 	exit 100
 fi
 # End of Download
-
-#unzip of Scan Central Client
-install_dir="/opt/Fortify/scancentral"
-
-echo 'Creating Directory for Scan Central Client'
-mkdir -p $install_dir/
-
-echo 'Unzipping...'
-unzip -n -d $install_dir/ ./$sc_install
+#persmission to execute
+chmod +x "$fti_install"
+sha256sum -c <(echo "$sha256_FTI $fti_install")
 e=$?        # return code last command
-
 if [ "${e}" -ne "0" ]; then
-	echo "ERROR: Can;t Unzip scancentral client"
+	echo "ERROR: Hashes could not be matched, can not continue - exit code ${e}"
 	exit 100
 fi
 
-echo 'Configuring...'
-#persmission to execute
-chmod +x "$install_dir/bin/scancentral"  
-
-cp -rf ./$sc_client_config $install_dir/Core/config/$sc_client_config
+#Execute the shell script to download and install fortify tools
+FTI_TOOLS=sc:latest SCANCENTRAL_CLIENT_AUTH_TOKEN=$sc_client_token source $fti_install
+e=$?        # return code last command
+if [ "${e}" -ne "0" ]; then
+	echo "ERROR: Can;t downloads the requierd files from server, can not continue - exit code ${e}"
+	exit 100
+fi
 
 echo "Scan Starting..."
 #Sending the code to scancentral
-$install_dir/bin/scancentral -url $sc_server start --build-tool msbuild -bf $solution_path -uptoken $auth_token -upload --application $app_name --application-version $app_version
+scancentral -url $sc_server start --build-tool msbuild -bf $solution_path -uptoken $auth_token -upload --application $app_name --application-version $app_version
 e=$?        # return code last command
 
 if [ "${e}" -ne "0" ]; then
-	echo "ERROR: Can;t Upload code to scan"
+	echo "ERROR: Can;t Submit scan to ScanCentral"
 	exit 100
 fi
+
+echo "INFO: Scan Submitted Successfully..."
