@@ -43,11 +43,10 @@ hooks:
     - location: scripts/start_service
       timeout: 300
       runas: root
-      ###########################################################################################
-      #                     INTEGRATE FORTIFY DAST                                              #
-      # FOR SCANCENTRAL = fortify_dast_dotnet_template                                          #
-      ##########################################################################################      
+  ###################################################
+  #             INTEGRATE FORTIFY DAST              #
+  ###################################################
   ValidateService:
-    - location: scripts/fortify_dast_dotnet_template
+    - location: scripts/fortify_dast_scancentral_template.bash
       timeout: 300
       runas: root
