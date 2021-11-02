@@ -38,6 +38,13 @@ if [ "${e}" -ne "0" ]; then
 	exit 100
 fi
 
+FTI_TOOLS=sc:latest source $fti_install
+e=$?        # return code last command
+if [ "${e}" -ne "0" ]; then
+	echo "ERROR: Can;t downloads the requierd files from server, can not continue - exit code ${e}"
+	exit 100
+fi
+
 #Execute the shell script to download and install fortify tools
 FTI_TOOLS=fu:v5.2.1 source $fti_install
 e=$?        # return code last command
@@ -46,7 +53,8 @@ if [ "${e}" -ne "0" ]; then
 	exit 100
 fi
 
-zip -r sourcecode.zip src
+#Generate Java Package to upload in FoD
+scancentral package -o sourcecode.zip --build-tool mvn
 
 java -jar $fortify_tools_dir/$fod_util -ac $fod_user_key $fod_pwd_secret -rid $fod_release_id -purl $fod_url -aurl $fod_api_url -tc $fod_tenant -z sourcecode.zip -ep 2 -rp 2 -pp 2 
 e=$?        # return code last command
