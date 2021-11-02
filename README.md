@@ -1,4 +1,4 @@
-# CloudDSODeveloperKit
+# Fortify Templates for Cloud DevSecOps 
  The current digital security landscape for businesses can accurately be described in one word: complicated. More numerous and advanced threats, more nebulous and complex compliance requirements, more difficult and intricate infrastructure to secure. Simply put, keeping data, workloads, and users secure is more than a full-time job—and organizations are having trouble keeping up.
 
 Engineers in DevOps shops work in a self-service environment. Automated Continuous Integration servers provide self-service builds and testing. Security needs to be made available to the team in the same way: convenient, available when your engineers need it, seamless, and efficient.
