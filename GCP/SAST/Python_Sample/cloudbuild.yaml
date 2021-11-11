@@ -10,10 +10,10 @@ steps:
   #args: ['bash', './fortify_sast_fod_python_template.bash']
   #                                                 #
   # For FORTIFY SCANCENTRAL uncomment the next line #
-  #args: ['bash', './fortify_sast_scancentral_java_template.bash']
+  #args: ['bash', './fortify_sast_scancentral_python_template.bash']
   #                                                 #
   ###################################################
-  args: ['bash', './fortify_sast_scancentral_java_template.bash']
+  args: ['bash', './fortify_sast_scancentral_python_template.bash']
   env:
     - 'FORTIFY_SC_URL=${_SC_URL}' 
     - 'FORTIFY_CI_TOKEN=${_SC_CI_TOKEN}' 
