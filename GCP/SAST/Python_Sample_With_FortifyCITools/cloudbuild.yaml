@@ -1,6 +1,4 @@
 steps:
-- name: 'python:3.9'
-  args: ['python', '-m', 'pip', 'install', '-r', 'requirements.txt', '--user']
 - name: 'fortifydocker/fortify-ci-tools:latest'
   entrypoint: bash
   args: 

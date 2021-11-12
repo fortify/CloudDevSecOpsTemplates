@@ -13,16 +13,16 @@ steps:
   #args: ['bash', './fortify_sast_scancentral_python_template.bash']
   #                                                 #
   ###################################################
-  args: ['bash', './fortify_sast_scancentral_python_template.bash']
+  args: ['bash', './fortify_sast_fod_python_template.bash']
   env:
-    - 'FORTIFY_SC_URL=${_SC_URL}' 
-    - 'FORTIFY_CI_TOKEN=${_SC_CI_TOKEN}' 
-    - 'APP_NAME=${_SC_APP_NAME}' 
-    - 'APP_VERSION=${_SC_APP_VERSION}' 
-    - 'FORTIFY_SC_CLIENT_AUTH=${_SC_CLIENT_TOKEN}' 
-    - 'FOD_BASEURL=https://ams.fortify.com'
-    - 'FOD_RELEASE_ID=348301'
-    - 'FOD_TENANT=POV_BSI' 
-    - 'FOD_USER=2f44640f-c988-4000-b1ae-6003a83e6da6'
-    - 'FOD_PWD=UmVKWXZjVGdxK1RsKHFpeW55VkZSdFE3NjIxNipm0'
+    #- 'FORTIFY_SC_URL=${_SC_URL}' 
+    #- 'FORTIFY_CI_TOKEN=${_SC_CI_TOKEN}' 
+    #- 'APP_NAME=${_SC_APP_NAME}' 
+    #- 'APP_VERSION=${_SC_APP_VERSION}' 
+    #- 'FORTIFY_SC_CLIENT_AUTH=${_SC_CLIENT_TOKEN}' 
+    - 'FOD_BASEURL=${_FOD_URL}'
+    - 'FOD_RELEASE_ID=${_FOD_APP_RELEASE_ID}'
+    - 'FOD_TENANT=${_FOD_TENANT}' 
+    - 'FOD_USER=${_FOD_USER}'
+    - 'FOD_PWD=${_FOD_PWD}'
 timeout: 2400s
