@@ -58,9 +58,7 @@ if [ "${e}" -ne "0" ]; then
 fi
 
 #Generate Java Package to upload in FoD
-scancentral package -o sourcecode.zip --build-tool none
-
-echo $PATH
+scancentral package -o sourcecode.zip --build-tool none --python-requirements requirements.txt
 
 java -jar $fortify_tools_dir/$fod_util -ac $fod_user_key $fod_pwd_secret -rid $fod_release_id -purl $fod_url -aurl $fod_api_url -tc $fod_tenant -z sourcecode.zip -ep 2 -rp 2 -pp 2 
 #java -jar $fod_util -ac $fod_user_key $fod_pwd_secret -rid $fod_release_id -purl $fod_url -aurl $fod_api_url -tc $fod_tenant -z sourcecode.zip -ep 2 -rp 2 -pp 2 
