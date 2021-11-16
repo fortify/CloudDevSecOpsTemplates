@@ -1,5 +1,5 @@
 # GCP CloudBuild Configuration
-Fortify can be integrated using Docker image for Fortify CI tools. Please ensure to leverage enviornment variables from the 
+Fortify can be integrated using Docker image for Fortify CI tools. Please ensure to leverage enviornment variables from the secret manager.
 
 ##Add/Update below parameters for ScanCentral template
 
