@@ -8,9 +8,9 @@ steps:
               curl_url=$$FORTIFY_DAST_API'api/v2/scans/start-scan-cicd'
               en_auth_token=`echo -n $$FORTIFY_CI_TOKEN | base64`
               # Start eDAST Scan
-              curl -X POST $curl_url -H  "accept: text/plain" -H  "Authorization: FORTIFYTOKEN $en_auth_token" -H  "Content-Type: application/json-patch+json" -d "{  \"cicdToken\": \"$$EDAST_CI_CD_TOKEN\",  \"name\": \"GCP Pipeline eDAST Scan\",  \"scannerId\": 0,  \"useAssignedScannerOnly\": true,  \"overrides\": {    \"scanPriority\": 0  }}"
+              curl -X POST $curl_url -H  "accept: text/plain" -H  "Authorization: FORTIFYTOKEN $en_auth_token" -H  "Content-Type: application/json-patch+json" -d "{  \"cicdToken\": \"$SCDAST_CI_CD_TOKEN\",  \"name\": \"GCP Pipeline eDAST Scan\",  \"scannerId\": 0,  \"useAssignedScannerOnly\": true,  \"overrides\": {    \"scanPriority\": 0  }}"
   env:
     - 'FORTIFY_DAST_API=${_EDAST_API_URL_}'
     - 'FORTIFY_CI_TOKEN=${_SSC_CI_TOKEN_}'
-    - 'EDAST_CI_CD_TOKEN=${_EDAST_CICD_TOKEN}'
+    - 'SCDAST_CI_CD_TOKEN=${_EDAST_CICD_TOKEN}'
 timeout: 2400s
