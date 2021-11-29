@@ -10,32 +10,13 @@ AWS templates will help onboard applications with application security integrati
 ## Integrating Fortify with AWS CodeStar
 Integrating Fortify with CI process is fairly simple pull and push switch using the templates given in the above folders.  Fortify can be integrated using below steps.
 
-a. Identify the requirements of integrating Fortify On Prem or Fortify On Demand
-	
-  - Identify application is on premise, Hybrid or Cloud based
-  - Identify if you like this to get as part of managed scan
-
-b. Identify requirement around integrating using sync approach vs async approach
-	
-   - you like to wait while the scan is running, use `fortify_sast_<<technology>>_template.bash` file
-   - Since the pipline needs to finish within time constraint then you can let the scan run in async mode, use `fortify_sc_<<technology>>_template.bash` file
-   - if you like to leverage FoD service, use `fod_sast_template.bash` file
-   - Identify the type of scan you like to integrate, go to **SAST** folder or **DAST** folder
-
-c. Pull the appropriate template from the folder above
-	
-   - go to appropriate technology folder
-   - pull/copy `fortify_sast_<<technology>>_template.bash` into your local repo
-   - call the bash script within your `buildspec.yml` (compare and merge the POST_BUILD section in buildspec.yml
-     with your existing buildspec.yml)
-
-d. Set the configuration variables in the templates pull from the repo
-
+1. Identify your Fortify solution (Fortify on-premises or Fortify on Demand)
+2. Identify the type of scan you like to integrate, then go to **SAST** folder or **DAST** folder
+3. Pull/copy `fortify_sast_<<technology>>_template.bash` into your local repo
+4. Call the bash script within your `buildspec.yml` (compare and merge the POST_BUILD section in buildspec.yml with your existing buildspec.yml)
+5. Set the configuration variables in the templates pull from the repo
    - Open `fortify_sast_<<technology>>_template.bash`
    - change the variables as per your Fortify platform
-	
-e. push it to your repository i.e. CodeCommit / GitHub
-
-   - commit to your repository i.e. CodeCommit or GitHub
+6. Push it to your repository i.e. CodeCommit / GitHub
 	
 ### Trigger the build, and you are done !!

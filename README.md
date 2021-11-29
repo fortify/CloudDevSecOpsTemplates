@@ -1,20 +1,12 @@
 # Fortify Templates for Cloud DevSecOps 
- The current digital security landscape for businesses can accurately be described in one word: complicated. More numerous and advanced threats, more nebulous and complex compliance requirements, more difficult and intricate infrastructure to secure. Simply put, keeping data, workloads, and users secure is more than a full-time job—and organizations are having trouble keeping up.
+Modern software delivery is synonymous with DevSecOps, meanwhile Software portfolios are in the midst of Cloud Transformation spanning cloud native, to lift-and-shift, and everything in between.  Security must keep pace with the ‘everything-as-code’ era to transition from point of friction to enablement, without sacrificing quality.  Fortify offers end-to-end application security solutions with the flexibility of testing on-premises and on-demand to scale and cover the entire software development lifecycle. Fortify integrates into your existing development toolchain seamlessly, giving you the highest quality findings and remediation advice during every stage, creating more secure software. With Fortify, you don’t need to trade quality of results for speed.
 
-Engineers in DevOps shops work in a self-service environment. Automated Continuous Integration servers provide self-service builds and testing. Security needs to be made available to the team in the same way: convenient, available when your engineers need it, seamless, and efficient.
+This project provides developers a collection of reference templates and implementations to enable seamless integration of Fortify tools with cloud native development. The entire project consist of tools and automated scripts to help integrate Foritfy in different public cloud providers such as Azure DevOps, AWS CodeStar and Google Cloud Platform. In order to support developers and application security teams, we have created a templates which could help integrate Fortify static application security testing (SAST) and dynamic application security testing (DAST) into CI/CD pipelines faster and helps applications onboard faster.
 
-Don’t get in their way. Don’t make developers wait for answers or stop work in order to get help. Give them security tools that they can use and understand and that they can provision and run themselves. And ensure that those tools fit into how they work: into Continuous Integration and Continuous Delivery, into their IDEs as they enter code, into code pull requests. In other words, ensure that tests and checks provide fast, clear feedback.
+There are two common approaches to integrate Fortify SAST. The first one is known as **Local Integration** and the other is **Orchestrated Integration**. Fortify DAST integration utilizes the orchestrated approach and the ScanCentral DAST for shifting enterprise-grade DAST left.
 
-This project is an attempt to provide developer's a way to enable fortify with native cloud development. The entire project consist of tools and automated scripts to help integrate Foritfy in different public cloud providers such as Azure DevOps, AWS and Google Cloud Platform. I have also provide templates for source code repository such as GitHub and GitLab to integrate fortify natively.
-
-In order to support developers and application security teams, I have created a templates which could help integrate Fortify in CI/CD pipeline faster and helps applications onboarding quicker.
-
-There are majorly two(2) approaches to integrate SAST, the first one is known as **Native Integration** and the other is **NextGen integration**
-
-![SAST integration approaches](https://github.com/rohitbaryha1/cloudDSODevKit/blob/main/web/SAST-approach.jpg?raw=true)
-
-## Approach 1 : Native Integration
-This approach is more of native support from Fortify using SCA tool. This approach is basd on synchronous method. This approach gives ability to build the quality gates since the result can be pulled while pipeline is running. Below are some of the steps of performing a integration in CI pipeline.
+## SAST Approach 1 : Local Integration
+This approach utilizes a local installation of Fortify SCA to perform the SAST scan, and operates using an synchronous method. It gives the ability to build the quality gates so the result can be pulled while the pipeline is running. Below are some of the steps of performing an integration into the CI pipeline.
 
 	1 Download the SCA Installer file ~1 GB
 	2 Download the fortify.license file
@@ -25,17 +17,18 @@ This approach is more of native support from Fortify using SCA tool. This approa
 	7 Upload the results to SSC via FortifyClient
 	8 Apply Quality Gate via FPRUtility (Optional)
 
-## Approach 2 : NextGen Integration (Scancentral Approach)
-This approach is based on asynchronous method. Fortify has a scancentral engine which enable remote scanning quite easily. below are some of the steps of performing a NextGen integration in CI pipeline.
+## SAST Approach 2 : Orchestrated Integration (ScanCentral and FoD Approach)
+This approach is based on the asynchronous logic, where application code is intelligently packaged in the CI pipeline or runner. The package is uploaded to centralized scanning infrastructure of Fortify SAST scanners in ScanCentral (On-prem) or Fortify on Demand (SaaS). Below are some of the steps of performing an Orchestrated integration in the CI pipeline.
 
-	1. Download the ScanCentral Client file ~60 MB, {required Java version >=1.8}
-	2. Extract the ScanCentral Client
-	3. Download / Create the client.properties file
+	1. Download the ScanCentral Client file, along with FoDUploader (FoD only) {required Java version >=1.8}
+	2. Extract the ScanCentral Client and FoDUploader utilities
+	3. Download / Create the client.properties file (ScanCentral only)
 	4. Translate the code (conditional)
-	5. Upload the code via ScanCentral Client to ScanCentral Controller
-	6. Results will be uploaded to SSC
-	7. Quality Gate (may be in next release)
+	5. Upload the code via ScanCentral Client to ScanCentral Controller or FoD
+	6. Results will be uploaded to SSC / FoD
+	7. Quality Gate via FoDUploader polling or SSC API
 
-Currently,  these templates are technology basis which means you will find .NET, JAVA technology templates to leverage as you see fit. there will be more technologies coming soon...
+Currently, these templates are technology based which means you will find helpful .NET, JAVA and Python examples to provide an idea for how to invoke Fortify SCA and/or the automated packaging client for these common languages.
 
-
+## DAST Approach: Orchestrated Integration
+Similar to the orchestrated SAST approach, integrating DAST simply requires invoking the ScanCentral DAST API once your application is deployed to a test, staging or production environment.
