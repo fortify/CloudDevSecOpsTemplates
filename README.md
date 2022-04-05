@@ -30,5 +30,7 @@ This approach is based on the asynchronous logic, where application code is inte
 
 Currently, these templates are technology based which means you will find helpful .NET, JAVA and Python examples to provide an idea for how to invoke Fortify SCA and/or the automated packaging client for these common languages.
 
+Additionally, Fortify on Demand users who have purchased the Software Composition Analysis subsciptions will be able to assess the open sources software in conjunction with the SAST analysis.  By simply enabling the Software Composition Analysis option in the FoD Static Scan Settings, the software bill of materials (SBOM) and list of known vulnerabilities (CVEs, etc) will be automatically produced against the code being tested.
+
 ## DAST Approach: Orchestrated Integration
 Similar to the orchestrated SAST approach, integrating DAST simply requires invoking the ScanCentral DAST API once your application is deployed to a test, staging or production environment.
