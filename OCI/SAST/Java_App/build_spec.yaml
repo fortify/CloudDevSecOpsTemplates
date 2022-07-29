@@ -1,0 +1,125 @@
+version: 0.1
+component: build
+timeoutInSeconds: 6000
+runAs: root
+shell: bash
+env:
+  # these are local variables to the build config
+  variables:
+    key: "value"
+  # the value of a vaultVariable is the secret-id (in OCI ID format) stored in the OCI Vault service
+  # you can then access the value of that secret in your build_spec.yaml commands
+  vaultVariables:
+    SC_URL: <<CHANGE THIS TO OCID OF VAULT VARIABLE i.e. ocid1.vaultsecret.oc1.XXXXXXXXXXXX>>               # this must be ScanCentral controller URL with trailing slash('/')
+    SC_TOKEN: <<CHANGE THIS TO OCID OF VAULT VARIABLE i.e. ocid1.vaultsecret.oc1.XXXXXXXXXXXX>>             # authentication token for SSC, this should be CI_TOKEN
+    client_auth_token: <<CHANGE THIS TO OCID OF VAULT VARIABLE i.e. ocid1.vaultsecret.oc1.XXXXXXXXXXXX>>    # ScanCentral Client authentication token
+  # exportedVariables are made available to use as parameters in sucessor Build Pipeline stages
+  # For this Build to run, the Build Pipeline needs to have a BUILDRUN_HASH parameter set
+  exportedVariables:
+    - BUILDRUN_HASH
+
+
+steps:
+  - type: Command
+    name: "Export variables"
+    timeoutInSeconds: 40
+    command: |
+      export BUILDRUN_HASH=`echo ${OCI_BUILD_RUN_ID} | rev | cut -c 1-7`
+      echo "BUILDRUN_HASH: " $BUILDRUN_HASH
+    onFailure:
+      - type: Command
+        timeoutInSeconds: 40
+        command: |
+          echo "Handling Failure"
+          echo "Failure successfully handled"
+        timeoutInSeconds: 400
+        runAs: root
+
+  - type: Command
+    timeoutInSeconds: 600
+    name: "Install Prereqs"
+    command: |
+      yum install -y java-11-openjdk-devel
+      alternatives --set java /usr/lib/jvm/java-11-openjdk-11.0.16.0.8-1.0.1.el7_9.x86_64/bin/java
+      # Java version should be 11.x
+      java -version
+      @ Maven plugin
+      yum install maven
+      
+    onFailure:
+      - type: Command
+        command: |
+          echo "Handling Failure"
+          echo "Failure successfully handled"
+        timeoutInSeconds: 40
+        runAs: root
+
+  - type: Command
+    timeoutInSeconds: 600
+    name: "Setting up Fortify"
+    command: |  
+        sha256_FTI='2156a4926b33f5130a8101b9a809ee189cc3e51e698e1ce7516ce31f3bb09da0'
+        fortify_tool_installer='https://raw.githubusercontent.com/fortify/FortifyToolsInstaller/main/FortifyToolsInstaller.sh'  # BASE UTILITY DO NOT CHANGE
+
+        #Parameters to configure installable
+        fti_install='FortifyToolsInstaller.sh'
+
+        #Download required files, please ensure the URL is available
+        wget "$fortify_tool_installer" 
+        e=$?        # return code last command
+        if [ "${e}" -ne "0" ]; then
+            echo "ERROR: Can;t downloads the requierd files from server, can not continue - exit code ${e}"
+            exit 100
+        fi
+        # End of Download
+        #persmission to execute
+        chmod +x "$fti_install"
+        sha256sum -c <(echo "$sha256_FTI $fti_install")
+        e=$?        # return code last command
+        if [ "${e}" -ne "0" ]; then
+            echo "ERROR: Hashes could not be matched, can not continue - exit code ${e}"
+            exit 100
+        fi
+        
+        echo $client_auth_token
+        #Execute the shell script to download and install fortify tools
+        FTI_TOOLS=sc:latest SCANCENTRAL_CLIENT_AUTH_TOKEN=${client_auth_token} source $fti_install
+        e=$?        # return code last command
+        if [ "${e}" -ne "0" ]; then
+            echo "ERROR: Can;t downloads the requierd files from server, can not continue - exit code ${e}"
+            exit 100
+        fi
+        echo "INFO: ScanCentral configured successfully..."
+    onFailure:
+      - type: Command
+        command: |
+          echo "Handling Failure"
+          echo "Failure successfully handled"
+        timeoutInSeconds: 40
+        runAs: root
+
+  - type: Command
+    timeoutInSeconds: 600
+    name: "Vulnerability Assessment"
+    command: |
+
+        echo "Scan Starting..."
+        
+        #Sending the code to scancentral
+        scancentral -url ${SC_URL} start --build-tool mvn -uptoken ${SC_TOKEN} -upload --application "<<SSC_APP_NAME>>" --application-version "<<SSC_APP_VERSION>>"
+        e=$?        # return code last command
+        if [ "${e}" -ne "0" ]; then
+            echo "ERROR: Can;t submit scan to ScanCentral"
+            exit 100
+        fi
+
+        echo "INFO: Scan Submitted Successfully..."
+        
+
+    onFailure:
+      - type: Command
+        command: |
+          echo "Handling Failure"
+          echo "Failure successfully handled"
+        timeoutInSeconds: 40
+        runAs: root

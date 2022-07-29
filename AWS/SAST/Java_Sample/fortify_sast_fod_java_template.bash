@@ -3,7 +3,7 @@
 #Parameters Section
 
 #download the required tools installation script
-sha256_FTI='05ac617d1e6fde80caa45fa7a1300d34cbd30a714c5276db96cc04876e7646b6'
+sha256_FTI='2156a4926b33f5130a8101b9a809ee189cc3e51e698e1ce7516ce31f3bb09da0'
 fortify_tool_installer='https://raw.githubusercontent.com/fortify/FortifyToolsInstaller/main/FortifyToolsInstaller.sh'  # BASE UTILITY DO NOT CHANGE
 
 fod_url=$FOD_BASEURL 												# Fortify On Demand URL 
