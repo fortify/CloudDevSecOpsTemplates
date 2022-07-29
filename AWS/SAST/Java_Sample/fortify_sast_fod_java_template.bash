@@ -8,7 +8,7 @@ fortify_tool_installer='https://raw.githubusercontent.com/fortify/FortifyToolsIn
 
 fod_url=$FOD_BASEURL 												# Fortify On Demand URL 
 fod_api_url='https://api.'`echo "$fod_url" | awk -F/ '{print $3}'`	# Fortify On Demand API URL
-fortify_tools_dir='/root/.fortify/tools/FoDUploader/v5.2.1'			# Default installation directory
+fortify_tools_dir='/root/.fortify/tools/FoDUploader/v5.3.1'			# Default installation directory
 fod_util='FoDUpload.jar'											# FoD Utility alias set into FTI Script [[DO NOT CHANGE]]
 
 #FOD Details to Upload Code
@@ -46,7 +46,7 @@ if [ "${e}" -ne "0" ]; then
 fi
 
 #Execute the shell script to download and install fortify tools
-FTI_TOOLS=fu:v5.2.1 source $fti_install
+FTI_TOOLS=fu:v5.3.1 source $fti_install
 e=$?        # return code last command
 if [ "${e}" -ne "0" ]; then
 	echo "ERROR: Can;t downloads the requierd files from server, can not continue - exit code ${e}"
