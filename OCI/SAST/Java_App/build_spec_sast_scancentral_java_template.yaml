@@ -43,9 +43,10 @@ steps:
       alternatives --set java /usr/lib/jvm/java-11-openjdk-11.0.16.0.8-1.0.1.el7_9.x86_64/bin/java
       # Java version should be 11.x
       java -version
-      @ Maven plugin
+      # Maven plugin
       yum install maven
-      
+      # Maven Installed
+      echo "Installation done..."
     onFailure:
       - type: Command
         command: |
