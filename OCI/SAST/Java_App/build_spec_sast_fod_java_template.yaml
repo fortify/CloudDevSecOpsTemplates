@@ -10,10 +10,10 @@ env:
   # the value of a vaultVariable is the secret-id (in OCI ID format) stored in the OCI Vault service
   # you can then access the value of that secret in your build_spec.yaml commands
   vaultVariables:
-    FOD_TENANT: ocid1.vaultsecret.oc1.ap-mumbai-1.amaaaaaaxzphy7aapqlqd7fzz7x6prb3jn57zfunzyoqo5h3nithn2jacxra          # TENANT ID
-    FOD_USER: ocid1.vaultsecret.oc1.ap-mumbai-1.amaaaaaaxzphy7aaic4dkkt63hu7yokbyoxswuvr2rvl2wjzajauosavbzdq			# FOD USER KEY
-    FOD_PWD: ocid1.vaultsecret.oc1.ap-mumbai-1.amaaaaaaxzphy7aaw3pkuimsdy3zxggdkpayxlx5krt3zdcie5th7v3e3rjq			    # FOD PAT
-    FOD_RELEASE_ID: ocid1.vaultsecret.oc1.ap-mumbai-1.amaaaaaaxzphy7aauouolbp2c3jmqawgttdqa3h3q4n344csuzczlny2lrfa	    # FOD APPLICATION BASED RELEASE ID  
+    FOD_TENANT: <<CHANGE THIS TO OCID OF VAULT VARIABLE i.e. ocid1.vaultsecret.oc1.XXXXXXXXXXXX>>          # TENANT ID
+    FOD_USER: <<CHANGE THIS TO OCID OF VAULT VARIABLE i.e. ocid1.vaultsecret.oc1.XXXXXXXXXXXX>>			# FOD USER KEY
+    FOD_PWD: <<CHANGE THIS TO OCID OF VAULT VARIABLE i.e. ocid1.vaultsecret.oc1.XXXXXXXXXXXX>>			    # FOD PAT
+    FOD_RELEASE_ID: <<CHANGE THIS TO OCID OF VAULT VARIABLE i.e. ocid1.vaultsecret.oc1.XXXXXXXXXXXX>>	    # FOD APPLICATION BASED RELEASE ID  
 
   # exportedVariables are made available to use as parameters in sucessor Build Pipeline stages
   # For this Build to run, the Build Pipeline needs to have a BUILDRUN_HASH parameter set
