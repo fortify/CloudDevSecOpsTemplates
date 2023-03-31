@@ -1,12 +1,22 @@
 version: 0.2
 env:
   variables:
-    APP_NAME: "DVJA-SSC"
-    APP_VERSION: "2.0"
+    APP_NAME: "<<APP_NAME>>"
   parameter-store:
-    FORTIFY_SC_URL: "/fortify/sc_url"
-    FORTIFY_CI_TOKEN: "/fortify/ci_token" 
-    FORTIFY_SC_CLIENT_AUTH: "/fortify/sc_client_auth"
+      ###############################################################
+      #          INTEGRATE FORTIFY ON DEMAND                        #
+        FOD_RELEASE_ID: "/fod/releaseid"
+        FOD_TENANT: "/fod/tenant"
+        FOD_USER: "/fod/user"
+        FOD_PAT: "/fod/pat"  
+      ###############################################################
+      #           INTEGRATE FORTIFY SCANCENTRAL                     #
+        FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN: "/fortify/client_auth_token"
+        FCLI_DEFAULT_SSC_USER: "/fortify/ssc_user"
+        FCLI_DEFAULT_SSC_PASSWORD: "/fortify/ssc_password"
+        FCLI_DEFAULT_SSC_CI_TOKEN: "/fortify/ci_token"
+        FCLI_DEFAULT_SSC_URL: "/fortify/ssc_url"
+        SSC_APP_VERSION_ID: "/fortify/ssc_app_versionid"
 phases:
   install:
     runtime-versions:
@@ -23,11 +33,17 @@ phases:
       # Do not remove this statement. This command is required for AWS CodeStar projects.
       # Update the AWS Partition, AWS Region, account ID and project ID in the project ARN in template-configuration.json file so AWS CloudFormation can tag project resources.
       - sed -i.bak 's/\$PARTITION\$/'${PARTITION}'/g;s/\$AWS_REGION\$/'${AWS_REGION}'/g;s/\$ACCOUNT_ID\$/'${ACCOUNT_ID}'/g;s/\$PROJECT_ID\$/'${PROJECT_ID}'/g' template-configuration.json
-      ###########################################################################################
-      #                     INJECT FORTIFY SAST SCRIPT                                          #
-      # FOR SCA = fortify_sast_dotnet_template, FOR SCANCENTRAL = fortify_sc_dotnet_template    #
-      ##########################################################################################
-      - bash ./fortify_sc_dotnet_template.bash
+      ###################################################
+      #             INTEGRATE FORTIFY SAST              #
+      #                                                 #
+      # For FORTIFY ON DEMAND uncomment the next line   #
+      - bash fortify_sast_fod_template.bash
+      #                                                 #
+      # For FORTIFY SCANCENTRAL uncomment the next line #
+      #- bash fortify_sast_scancentral_template.bash
+      #                                                 #
+      #                                                 #
+      ###################################################
 artifacts:
   files:
     - template.yml

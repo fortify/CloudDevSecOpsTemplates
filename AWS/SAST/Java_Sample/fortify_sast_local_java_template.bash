@@ -56,7 +56,7 @@ $install_dir/bin/sourceanalyzer -b aws-java-build -clean
 
 echo "Translating..."
 #include more file types as required 
-$install_dir/bin/sourceanalyzer -b aws-java-build -source 1.8 -cp "./**/*.jar" "./**/*.java" "./**/*.js" "./**/*.jsp" "./**/*.html" "./**/*.properties" "./**/*.xml"
+$install_dir/bin/sourceanalyzer -b aws-java-build -source 11 -cp "./**/*.jar" "./**/*.java" "./**/*.js" "./**/*.jsp" "./**/*.html" "./**/*.properties" "./**/*.xml"
 
 echo "Scan Started..."
 #Generate SAST report

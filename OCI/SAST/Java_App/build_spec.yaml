@@ -1,0 +1,71 @@
+version: 0.1
+component: build
+timeoutInSeconds: 6000
+runAs: root
+shell: bash
+env:
+  # these are local variables to the build config
+  variables:
+  # the value of a vaultVariable is the secret-id (in OCI ID format) stored in the OCI Vault service
+  # you can then access the value of that secret in your build_spec.yaml commands
+  vaultVariables:
+    # Use below variables for FORTIFY ON DEMAND integration
+    FOD_TENANT: ocid1.vaultsecret.oc1.XXXXXXX           # TENANT ID
+    FOD_USER: ocid1.vaultsecret.oc1.XXXXXXX			    # FOD USER KEY
+    FOD_PWD: ocid1.vaultsecret.oc1.XXXXXXX			    # FOD PAT
+    FOD_RELEASE_ID: ocid1.vaultsecret.oc1.XXXXXXX	    # FOD APPLICATION BASED RELEASE ID  
+    # Use below variables for FORTIFY SCANCENTRAL integration
+    FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN: ocid1.vaultsecret.oc1.XXXXXXX       # SCANCENTRAL CLIENT AUTH TOKEN FOR HANDSHAKE
+    FCLI_DEFAULT_SSC_USER: ocid1.vaultsecret.oc1.XXXXXXX                        # SSC USERNAME
+    FCLI_DEFAULT_SSC_PASSWORD: ocid1.vaultsecret.XXXXXXX                        # SSC PASSWORD
+    FCLI_DEFAULT_SSC_CI_TOKEN: ocid1.vaultsecret.XXXXXXX                        # SSC CI TOKEN
+    FCLI_DEFAULT_SSC_URL: ocid1.vaultsecret.oc1.XXXXXXX                         # SSC URL
+    SSC_APP_VERSION_ID: ocid1.vaultsecret.oc1.XXXXXXX                           # SSC APPLICATION VERSION ID
+
+steps:
+  - type: Command
+    timeoutInSeconds: 600
+    name: "Install Prereqs"
+    command: |
+      java -version
+      yum install -y java-11-openjdk-devel
+      alternatives --display java
+      alternatives --set java /usr/lib/jvm/java-11-openjdk-11.0.18.0.10-1.el7_9.x86_64/bin/java
+      java -version
+      
+      # install Maven
+      yum install maven
+      mvn --version
+    onFailure:
+      - type: Command
+        timeoutInSeconds: 40      
+        command: |
+          echo "Handling Failure"
+          echo "Failure successfully handled"
+        timeoutInSeconds: 400
+        runAs: root
+
+  - type: Command
+    timeoutInSeconds: 600
+    name: "Fortify SAST"
+    command: |
+
+        ###############################################################
+        #                 INTEGRATE FORTIFY SAST                      #
+        #                                                             #
+        # For FORTIFY ON DEMAND uncomment the next line               #
+        bash fortify-sast-fod.bash
+        #                                                             #
+        # For FORTIFY SCANCENTRAL uncomment the next line             #
+        # bash fortify_sast_scancentral.bash             
+        #                                                             #
+        #                                                             #
+        ###############################################################          
+      
+    onFailure:
+      - type: Command
+        command: |
+          echo "Handling Failure"
+          echo "Failure successfully handled"
+        timeoutInSeconds: 40
+        runAs: root

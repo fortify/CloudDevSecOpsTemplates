@@ -1,3 +1,17 @@
+# Integrate Fortify ScanCentral Static AppSec Testing (SAST) into your Google Cloud Build pipeline
+# The following Google Cloud Build Secrets must be defined before using this step
+# ******* FOR SCANCENTRAL ************
+#   - $$FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN
+#   - $$FCLI_DEFAULT_SSC_USER
+#   - $$FCLI_DEFAULT_SSC_PASSWORD
+#   - $$FCLI_DEFAULT_SSC_CI_TOKEN
+#   - $$FCLI_DEFAULT_SSC_URL
+#   - $$SSC_APP_VERSION_ID
+# ******* FOR FOD ************
+#   - $$FOD_RELEASE_ID
+#   - $$FOD_USER
+#   - $$FOD_PAT
+#   - $$FOD_TENANT
 steps:
 - name: 'python:3.9'
   args: ['python', '-m', 'pip', 'install', '-r', 'requirements.txt', '--user']
@@ -7,22 +21,19 @@ steps:
   #             INTEGRATE FORTIFY SAST              #
   #                                                 #
   # For FORTIFY ON DEMAND uncomment the next line   #
-  #args: ['bash', './fortify_sast_fod_python_template.bash']
+  #args: ['bash', './fortify_sast_fod_template.bash']
   #                                                 #
   # For FORTIFY SCANCENTRAL uncomment the next line #
-  #args: ['bash', './fortify_sast_scancentral_python_template.bash']
+  #args: ['bash', './fortify_sast_scancentral_template.bash']
   #                                                 #
   ###################################################
-  args: ['bash', './fortify_sast_fod_python_template.bash']
+  args: ['bash', './fortify_sast_fod_template.bash']
+  secretEnv: ['FOD_RELEASE_ID', 'FOD_USER', 'FOD_PAT', 'FOD_TENANT', 'FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN', 'FCLI_DEFAULT_SSC_USER', 'FCLI_DEFAULT_SSC_PASSWORD', 'FCLI_DEFAULT_SSC_CI_TOKEN', 'FCLI_DEFAULT_SSC_URL'] 
   env:
-    #- 'FORTIFY_SC_URL=${_SC_URL}' 
-    #- 'FORTIFY_CI_TOKEN=${_SC_CI_TOKEN}' 
-    #- 'APP_NAME=${_SC_APP_NAME}' 
-    #- 'APP_VERSION=${_SC_APP_VERSION}' 
-    #- 'FORTIFY_SC_CLIENT_AUTH=${_SC_CLIENT_TOKEN}' 
-    - 'FOD_BASEURL=${_FOD_URL}'
-    - 'FOD_RELEASE_ID=${_FOD_APP_RELEASE_ID}'
-    - 'FOD_TENANT=${_FOD_TENANT}' 
-    - 'FOD_USER=${_FOD_USER}'
-    - 'FOD_PWD=${_FOD_PWD}'
+    - 'SSC_APP_VERSION_ID=${_SSC_APP_VERSION_ID}'
+    - 'SC_SAST_SENSOR_VERSION=22.2'  
+    - 'FOD_URL=https://ams.fortify.com' 
+    - 'FOD_API_URL=https://api.ams.fortify.com' 
+    - 'FOD_UPLOADER_OPTS=-ep 2 -pp 0 -I 1 -apf' 
+    - 'FOD_NOTES=Triggered by GCP Pipeline'     
 timeout: 2400s

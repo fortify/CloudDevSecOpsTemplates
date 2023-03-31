@@ -1,0 +1,36 @@
+# Integrate Fortify ScanCentral Static AppSec Testing (SAST) into your Google Cloud Build pipeline
+# The following Google Cloud Build Secrets must be defined before using this step
+#   - $$FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN
+#   - $$FCLI_DEFAULT_SSC_USER
+#   - $$FCLI_DEFAULT_SSC_PASSWORD
+#   - $$FCLI_DEFAULT_SSC_CI_TOKEN
+#   - $$FCLI_DEFAULT_SSC_URL
+#   - $$SSC_APP_VERSION_ID
+
+
+steps:
+# SAST SCAN USING FoP
+- name: 'fortifydocker/fortify-ci-tools:3.14.0-jdk-11'
+  entrypoint: bash
+  args: 
+    - -c
+    - |
+       echo Setting connection with Fortify Platform
+       fcli ssc session login
+       fcli sc-sast session login
+          
+       scancentral package -bt mvn -o package.zip
+       fcli sc-sast scan start --appversion=$$SSC_APP_VERSION_ID --upload --sensor-version=$$SC_SAST_SENSOR_VERSION --package-file=package.zip --store='?'
+
+       fcli sc-sast scan wait-for '?' --interval=30s
+       fcli ssc appversion-vuln count --appversion=$$SSC_APP_VERSION_ID
+
+       echo Terminating connection with Fortify Platform
+       fcli sc-sast session logout
+       fcli ssc session logout  
+  secretEnv: ['FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN', 'FCLI_DEFAULT_SSC_USER', 'FCLI_DEFAULT_SSC_PASSWORD', 'FCLI_DEFAULT_SSC_CI_TOKEN', 'FCLI_DEFAULT_SSC_URL'] 
+  env:
+    - 'FORTIFY_IP=${_PUBLIC_IP}'  
+    - 'SSC_APP_VERSION_ID=${_SSC_APP_VERSION_ID}'
+    - 'SC_SAST_SENSOR_VERSION=22.2'
+  id: 'fortify-static-scan'
