@@ -1,21 +1,18 @@
 
 <!-- START-INCLUDE:repo-usage.md -->
 
-# TODO: Repository Title - Usage Instructions
+# Fortify Templates for Cloud DevSecOps  - Usage Instructions
 
-TODO: Usage instructions
-
-# Fortify Templates for Cloud DevSecOps 
 Modern software delivery is synonymous with DevSecOps, meanwhile Software portfolios are in the midst of Cloud Transformation spanning cloud native, to lift-and-shift, and everything in between.  Security must keep pace with the ‘everything-as-code’ era to transition from point of friction to enablement, without sacrificing quality.  Fortify offers end-to-end application security solutions with the flexibility of testing on-premises and on-demand to scale and cover the entire software development lifecycle. Fortify integrates into your existing development toolchain seamlessly, giving you the highest quality findings and remediation advice during every stage, creating more secure software. With Fortify, you don’t need to trade quality of results for speed.
 
-This project provides developers a collection of reference templates and implementations to enable seamless integration of Fortify tools with cloud native development. The entire project consist of tools and automated scripts to help integrate Foritfy in different public cloud providers such as Azure DevOps, AWS CodeStar and Google Cloud Platform. In order to support developers and application security teams, we have created a templates which could help integrate Fortify static application security testing (SAST) and dynamic application security testing (DAST) into CI/CD pipelines faster and helps applications onboard faster.
+This project provides developers a collection of reference templates and implementations to enable seamless integration of Fortify tools with cloud native development. The entire project consist of pipeline as code and automated scripts to help integrate Foritfy in different public cloud providers such as Azure DevOps, AWS CodeStar, Google Cloud Platform and Oracle Cloud Infrastructure. In order to support developers and application security teams, we have created a templates which could help integrate Fortify static application security testing (SAST) and dynamic application security testing (DAST) into CI/CD pipelines faster and helps applications onboard faster.
 
 There are two common approaches to integrate Fortify SAST. The first one is known as **Orchestrated Integration** and the other is **Local Integration**. Fortify DAST integration utilizes the orchestrated approach and the ScanCentral DAST for shifting enterprise-grade DAST left.
 
 ## SAST Approach 1 : Orchestrated Integration (ScanCentral and FoD Approach)
 This approach is based on the asynchronous logic, where application code is intelligently packaged in the CI pipeline or runner. The package is uploaded to centralized scanning infrastructure of Fortify SAST scanners in ScanCentral (On-prem) or Fortify on Demand (SaaS). Below are some of the steps of performing an Orchestrated integration in the CI pipeline.
 
-	1. Use Foritfy CLI[https://github.com/fortify/fcli/]
+	1. Use [Foritfy CLI](https://github.com/fortify/fcli/)
 	2. Install the ScanCentral Client and FoDUploader utilities
 	3. Setup Parameters to authenticate Fortify CLI with ScanCentral and FoD
 	4. Translate the code (conditional)

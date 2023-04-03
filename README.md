@@ -1,4 +1,4 @@
-# TODO: Repository Title 
+# Fortify Templates for Cloud DevSecOps  
 
 
 <!-- START-INCLUDE:p.marketing-intro.md -->
@@ -32,7 +32,7 @@ TODO: Repository introduction
 
 ## Support
 
-The software is provided "as is", without warranty of any kind, and is not supported through the regular Micro Focus Support channels. Support requests may be submitted through the [GitHub Issues](TODO: Repository URL/issues) page for this repository. A (free) GitHub account is required to submit new issues or to comment on existing issues. 
+The software is provided "as is", without warranty of any kind, and is not supported through the regular Micro Focus Support channels. Support requests may be submitted through the [GitHub Issues](https://github.com/fortify/CloudDevSecOpsTemplates/issues) page for this repository. A (free) GitHub account is required to submit new issues or to comment on existing issues. 
 
 Support requests created through the GitHub Issues page may include bug reports, enhancement requests and general usage questions. Please avoid creating duplicate issues by checking whether there is any existing issue, either open or closed, that already addresses your question, bug or enhancement request. If an issue already exists, please add a comment to provide additional details if applicable.
 

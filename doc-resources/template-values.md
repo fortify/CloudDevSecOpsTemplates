@@ -1,5 +1,5 @@
 # repo-title
-TODO: Repository Title
+Fortify Templates for Cloud DevSecOps 
 
 # repo-url
-TODO: Repository URL
+https://github.com/fortify/CloudDevSecOpsTemplates
