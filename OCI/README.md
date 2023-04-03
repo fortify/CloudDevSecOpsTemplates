@@ -10,10 +10,10 @@ Integrating Fortify with the CI process is fairly simple pull and push switch us
 
 1. Identify your Fortify solution (Fortify on-premises or Fortify on Demand)
 2. Identify the type of scan you like to integrate, then go to **SAST** folder
-3. Pull and merge `build_spect_<<technology>>_template.yaml` into your local repo buildspec.yaml file.
+3. Pull and merge `build_spect_<<solution>>_template.yaml` into your local repo buildspec.yaml file.
 4. Set the OCI Vault variables in the templates pulled from the repo
    - Open `build_spec.yaml`
-   - Change the variables as per your Fortify platform
+   - Add the variables in your secret vault
 6. Push it to your repository i.e. OCI Repo / GitHub
 	
 ### Trigger the build, and you are done !!

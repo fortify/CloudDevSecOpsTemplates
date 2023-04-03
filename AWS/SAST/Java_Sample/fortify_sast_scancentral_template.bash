@@ -2,12 +2,6 @@
 # Integrate Fortify ScanCentral Static AppSec Testing (SAST) into your AWS Codestar pipeline
 
 # *** Configuration ***
-
-<<<<<<< Updated upstream
-#download the required tools installation script
-sha256_FTI='05ac617d1e6fde80caa45fa7a1300d34cbd30a714c5276db96cc04876e7646b6'
-fortify_tool_installer='https://raw.githubusercontent.com/fortify/FortifyToolsInstaller/main/FortifyToolsInstaller.sh'  # BASE UTILITY DO NOT CHANGE
-=======
 # The following variables must be defined in buildspect.yml
 export FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN=$FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN
 export FCLI_DEFAULT_SSC_USER=$FCLI_DEFAULT_SSC_USER
@@ -15,7 +9,6 @@ export FCLI_DEFAULT_SSC_PASSWORD=$FCLI_DEFAULT_SSC_PASSWORD
 export FCLI_DEFAULT_SSC_CI_TOKEN=$FCLI_DEFAULT_SSC_CI_TOKEN
 export FCLI_DEFAULT_SSC_URL=$FCLI_DEFAULT_SSC_URL
 ssc_app_version_id=$SSC_APP_VERSION_ID
->>>>>>> Stashed changes
 
 # Local variables (modify as needed)
 scancentral_client_version='22.2.0'

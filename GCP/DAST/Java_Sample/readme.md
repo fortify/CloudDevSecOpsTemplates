@@ -4,6 +4,11 @@ Fortify can be initiate DAST scan using ScanCentral DAST. Please ensure to lever
 ##Add below parameters for ScanCentral template
 
 	env:
-	    - 'FORTIFY_DAST_API=${_EDAST_API_URL_}'
-	    - 'FORTIFY_CI_TOKEN=${_SSC_CI_TOKEN_}'
-	    - 'SCDAST_CI_CD_TOKEN=${_EDAST_CICD_TOKEN}'
+	````
+	   FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN
+	   FCLI_DEFAULT_SSC_USER
+	   FCLI_DEFAULT_SSC_PASSWORD
+	   FCLI_DEFAULT_SSC_CI_TOKEN
+	   FCLI_DEFAULT_SSC_URL
+	   SSC_APP_VERSION_ID
+	````

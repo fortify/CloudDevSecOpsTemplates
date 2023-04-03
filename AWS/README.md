@@ -12,11 +12,12 @@ Integrating Fortify with CI process is fairly simple pull and push switch using 
 
 1. Identify your Fortify solution (Fortify on-premises or Fortify on Demand)
 2. Identify the type of scan you like to integrate, then go to **SAST** folder or **DAST** folder
-3. Pull/copy `fortify_sast_<<technology>>_template.bash` into your local repo
+3. Identify the technology you like to integrate with. Go to the respective folder 
+3. Pull/copy `fortify_sast_<<solution>>_template.bash` into your local repo
 4. Call the bash script within your `buildspec.yml` (compare and merge the POST_BUILD section in buildspec.yml with your existing buildspec.yml)
 5. Set the configuration variables in the templates pull from the repo
-   - Open `fortify_sast_<<technology>>_template.bash`
-   - change the variables as per your Fortify platform
+   - Open `fortify_sast_<<solution>>_template.bash`
+   - Add the parameters in parameter store in AWS 
 6. Push it to your repository i.e. CodeCommit / GitHub
 	
 ### Trigger the build, and you are done !!
