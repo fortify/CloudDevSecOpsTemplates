@@ -11,12 +11,12 @@ This approach is based on the asynchronous logic, where application code is inte
 	4. Translate the code (conditional)
 	5. Upload the code via ScanCentral Client to ScanCentral Controller or FoD
 	6. Results will be uploaded to SSC / FoD
-	7. Quality Gate via Fortify CLI utility
+	7. Security Gate via Fortify CLI utility
 
 Currently, these templates are technology based which means you will find helpful .NET, JAVA and Python examples to provide an idea for how to invoke Fortify SCA and/or the automated packaging client for these common languages.
 
 ## SAST Approach 2 : Local Integration
-This approach utilizes a local installation of Fortify SCA to perform the SAST scan, and operates using an synchronous method. It gives the ability to build the quality gates so the result can be pulled while the pipeline is running. Below are some of the steps of performing an integration into the CI pipeline.
+This approach utilizes a local installation of Fortify SCA to perform the SAST scan, and operates using an synchronous method. It gives the ability to build the security gates so the result can be pulled while the pipeline is running. Below are some of the steps of performing an integration into the CI pipeline.
 
 	1 Download the SCA Installer file ~1 GB
 	2 Download the fortify.license file
@@ -25,7 +25,7 @@ This approach utilizes a local installation of Fortify SCA to perform the SAST s
 	5 Translate the code using SCA CLI
 	6 Analyze the code using SCA CLI
 	7 Upload the results to SSC via FortifyClient
-	8 Apply Quality Gate via FPRUtility (Optional)
+	8 Apply Security Gate via FPRUtility (Optional)
 
 
 
