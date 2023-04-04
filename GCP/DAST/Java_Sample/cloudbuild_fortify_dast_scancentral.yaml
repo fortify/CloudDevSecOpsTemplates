@@ -1,0 +1,41 @@
+# Integrate Fortify ScanCentral Static AppSec Testing (SAST) into your Google Cloud Build pipeline
+# The following Google Cloud Build Secrets must be defined before using this step
+#   - $$FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN
+#   - $$FCLI_DEFAULT_SSC_USER
+#   - $$FCLI_DEFAULT_SSC_PASSWORD
+#   - $$FCLI_DEFAULT_SSC_CI_TOKEN
+#   - $$FCLI_DEFAULT_SSC_URL
+#   - $$SSC_APP_VERSION_ID
+
+
+steps:
+- name: 'fortifydocker/fortify-ci-tools:3.14.0-jdk-11'
+  entrypoint: "bash"
+  args:
+          - "-c"
+          - |
+              echo Setting connection with Fortify Platform
+              fcli ssc session login
+              fcli sc-dast session login
+              
+              fcli sc-dast scan start $$SC_DAST_SCAN_NAME --settings $$SC_DAST_CICD_IDENTIFIER
+              
+              echo Terminating connection with Fortify Platform
+              fcli sc-dast session logout
+              fcli ssc session logout
+  secretEnv: ['FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN', 'FCLI_DEFAULT_SSC_USER', 'FCLI_DEFAULT_SSC_PASSWORD', 'FCLI_DEFAULT_SSC_CI_TOKEN', 'FCLI_DEFAULT_SSC_URL'] 
+  env:
+    - 'SC_DAST_CICD_IDENTIFIER=${_SC_DAST_CICD_IDENTIFIER}'
+    - 'SC_DAST_SCAN_NAME=GCP_JAVA_DAST_SCAN'
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/fcli_default_sc_sast_client_auth_token/versions/latest
+    env: 'FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN'
+  - versionName: projects/$PROJECT_ID/secrets/fcli_default_ssc_user/versions/latest
+    env: 'FCLI_DEFAULT_SSC_USER'
+  - versionName: projects/$PROJECT_ID/secrets/fcli_default_ssc_password/versions/latest
+    env: 'FCLI_DEFAULT_SSC_PASSWORD' 
+  - versionName: projects/$PROJECT_ID/secrets/fcli_default_ssc_ci_token/versions/latest
+    env: 'FCLI_DEFAULT_SSC_CI_TOKEN'
+  - versionName: projects/$PROJECT_ID/secrets/fcli_default_ssc_url/versions/latest
+    env: 'FCLI_DEFAULT_SSC_URL'

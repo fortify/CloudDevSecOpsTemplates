@@ -1,11 +1,27 @@
 # GCP CloudBuild Configuration
-Fortify can be integrated using Docker image for Fortify CI tools. Please ensure to leverage enviornment variables from the secret manager.
+Please include below parameters for templates to run followed by adding them into Secret Manager
+please refer to this URL: [https://cloud.google.com/build/docs/securing-builds/use-secrets#yaml](https://cloud.google.com/build/docs/securing-builds/use-secrets#yaml)
 
-##Add/Update below parameters for ScanCentral template
+env:
 
-	env:
-	    - 'FORTIFY_SC_URL=${_SC_URL}'
-	    - 'FORTIFY_CI_TOKEN=${_SC_CI_TOKEN}'
-	    - 'APP_NAME=${_SC_APP_NAME}'
-	    - 'APP_VERSION=${_SC_APP_VERSION}'
-	    
+   Add below parameters in Cloud Build Secrets for ScanCentral template  
+   
+	**INTEGRATE FORTIFY SCANCENTRAL**
+		````
+		FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN
+		FCLI_DEFAULT_SSC_USER
+		FCLI_DEFAULT_SSC_PASSWORD
+		FCLI_DEFAULT_SSC_CI_TOKEN
+		FCLI_DEFAULT_SSC_URL
+		SSC_APP_VERSION_ID
+		````
+
+   Add below parameters in Cloud Build Secrets for FoD template	
+   
+	**INTEGRATE FORTIFY ON DEMAND**
+		````
+        'FOD_RELEASE_ID
+		FOD_USER
+		FOD_PAT
+		FOD_TENANT
+		````   
