@@ -40,4 +40,4 @@ Similar to the orchestrated SAST approach, integrating DAST simply requires invo
 
 ---
 
-*This document was auto-generated from USAGE.template.md; do not edit by hand*
+*[This document was auto-generated from USAGE.template.md; do not edit by hand](https://github.com/fortify/shared-doc-resources/blob/main/USAGE.md)*
