@@ -32,5 +32,5 @@ steps:
   env:
     - 'FORTIFY_IP=${_PUBLIC_IP}'  
     - 'SSC_APP_VERSION_ID=${_SSC_APP_VERSION_ID}'
-    - 'SC_SAST_SENSOR_VERSION=22.2'
+    - 'SC_SAST_SENSOR_VERSION=23.1'
   id: 'fortify-static-scan'
