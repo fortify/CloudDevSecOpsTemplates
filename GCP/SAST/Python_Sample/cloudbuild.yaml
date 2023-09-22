@@ -31,7 +31,7 @@ steps:
   secretEnv: ['FOD_RELEASE_ID', 'FOD_USER', 'FOD_PAT', 'FOD_TENANT', 'FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN', 'FCLI_DEFAULT_SSC_USER', 'FCLI_DEFAULT_SSC_PASSWORD', 'FCLI_DEFAULT_SSC_CI_TOKEN', 'FCLI_DEFAULT_SSC_URL'] 
   env:
     - 'SSC_APP_VERSION_ID=${_SSC_APP_VERSION_ID}'
-    - 'SC_SAST_SENSOR_VERSION=22.2'  
+    - 'SC_SAST_SENSOR_VERSION=23.1'  
     - 'FOD_URL=https://ams.fortify.com' 
     - 'FOD_API_URL=https://api.ams.fortify.com' 
     - 'FOD_UPLOADER_OPTS=-ep 2 -pp 0 -I 1 -apf' 
