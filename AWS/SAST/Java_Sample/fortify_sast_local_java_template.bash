@@ -12,7 +12,7 @@ app_version_id="<<APP_VERSION_ID>>"					# application version id from SSC
 pull_result_from_ssc=true
 
 #Parameters to configure installable
-fortify_install="Fortify_SCA_and_Apps_21.1.1_linux_x64.run" # installer file name, this may change based on version of installer. 
+fortify_install="Fortify_SCA_and_Apps_23.1.0_linux_x64.run" # installer file name, this may change based on version of installer. 
 fortify_license="fortify.license" 					#SAST license file name
 
 #Parameter for AWS S3 bucket
