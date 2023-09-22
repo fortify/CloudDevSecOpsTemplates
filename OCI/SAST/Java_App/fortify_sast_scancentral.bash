@@ -12,7 +12,7 @@
 	# SSC_APP_VERSION_ID
 	
 # Local variables (modify as needed)
-scancentral_client_version='22.2.0'
+scancentral_client_version='23.1.0'
 fcli_version='v1.1.0'
 fcli_sha='5553766f0f771abdf27f4c6b6d38a34825a64aaa5d72cfd03c68d7e2f43a49a0'
 

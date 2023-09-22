@@ -10,7 +10,7 @@
   args: 
     - -c
     - |
-       scancentral package -bt mvn -oss -o package.zip
+       scancentral package -oss -o package.zip
        FoDUpload -z package.zip -aurl $$FOD_API_URL -purl $$FOD_URL -rid $$FOD_RELEASE_ID -tc $$FOD_TENANT -uc $$FOD_USER $$FOD_PAT $$FOD_UPLOADER_OPTS -n "$$FOD_NOTES"
   secretEnv: ['FOD_RELEASE_ID', 'FOD_USER', 'FOD_PAT', 'FOD_TENANT'] 
   env:
