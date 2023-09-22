@@ -1,6 +1,5 @@
 # AWS Templates
-AWS templates will help onboard applications with application security integration. Fortify platform support AWS Codestar services so DevOps teams will be able to directly leverage these templates as part of pipeline automation. AWS CodeStar service supports Continious Delivery using their own defined YML files during build and release. 
-
+AWS templates will help onboard applications with application security integration. Fortify platform support AWS CodeBuild services so DevOps teams will be able to directly leverage these templates as part of pipeline automation. AWS CodeBuild service supports Continious Delivery using their own defined YML files during build and release. 
 
 1.	BuildSpec.yml : This template used to build and generate artifacts using AWS managed services. It depicts the CI process in DevSecOps framework.
 
