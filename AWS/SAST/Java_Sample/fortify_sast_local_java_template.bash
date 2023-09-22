@@ -17,7 +17,7 @@ fortify_license="fortify.license" 					#SAST license file name
 
 #Parameter for AWS S3 bucket
 s3_storage_required=true
-s3_bucket="<<S3 BUCKET URL>>" 					 #S3 bucket URL i.e. s3://aws-codestar-us-east-1********
+s3_bucket="<<S3 BUCKET URL>>" 					 #S3 bucket URL i.e. s3://aws-codebuild-us-east-1********
 #End of Parameters Section
 
 #Download required files, please ensure the URL is available
@@ -40,7 +40,7 @@ chmod +x "$fortify_install"
 # End of Download
 
 #Installation of SCA
-install_dir="/opt/Fortify/Fortify_SCA_and_Apps_21.1.1"
+install_dir="/opt/Fortify/Fortify_SCA_and_Apps_23.1.0"
 ./$fortify_install --fortify_license_path ./$fortify_license --mode unattended --installdir $install_dir/
 
 e=$?        # return code last command
