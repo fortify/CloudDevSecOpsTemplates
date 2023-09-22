@@ -12,7 +12,7 @@
 fod_url='https://ams.fortify.com'
 fod_api_url='https://api.ams.fortify.com/'
 fod_uploader_opts='-ep 2 -pp 0 -I 1 -apf'
-fod_notes="Triggered by OCI DevOps"
+fod_notes="Triggered by AWS CodeBuild"
 scancentral_client_version='23.1.0'
 fod_uploader_version='5.4.0'
 fcli_version='v1.1.0'
@@ -51,7 +51,7 @@ fcli tool sc-client install $scancentral_client_version -d $scancentral_home
 fcli tool fodupload install $fod_uploader_version -d $fod_uploader_home
 
 # Generate Java Package for upload to Fortify on Demand
-scancentral package -bt mvn -oss -o package.zip
+scancentral package -oss -o package.zip
 
 echo "INFO: start submitting scan"
 FoDUpload -z package.zip -aurl $fod_api_url -purl $fod_url -rid ${FOD_RELEASE_ID} -tc ${FOD_TENANT} -uc ${FOD_USER} ${FOD_PWD} $fod_uploader_opts -n "$fod_notes"
