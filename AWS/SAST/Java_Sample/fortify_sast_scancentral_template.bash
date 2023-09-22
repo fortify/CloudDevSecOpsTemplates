@@ -1,5 +1,5 @@
 #!/bin/bash
-# Integrate Fortify ScanCentral Static AppSec Testing (SAST) into your AWS Codestar pipeline
+# Integrate Fortify ScanCentral Static AppSec Testing (SAST) into your AWS CodeBuild pipeline
 
 # *** Configuration ***
 # The following variables must be defined in buildspect.yml
