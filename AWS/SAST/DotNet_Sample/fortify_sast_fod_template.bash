@@ -52,7 +52,7 @@ fcli tool sc-client install $scancentral_client_version -d $scancentral_home
 fcli tool fodupload install $fod_uploader_version -d $fod_uploader_home
 
 # Generate Package for upload to Fortify on Demand
-scancentral package -oss-o package.zip
+scancentral package -oss -o package.zip
 
 
 echo "INFO: start submitting scan"
