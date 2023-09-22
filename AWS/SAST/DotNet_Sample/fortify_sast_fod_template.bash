@@ -2,7 +2,7 @@
 
 # *** Configuration ***
 
-# Integrate Fortify On Demand Static AppSec Testing (SAST) into your AWS Codestar pipeline
+# Integrate Fortify On Demand Static AppSec Testing (SAST) into your AWS CodeBuild pipeline
 # Below Parameters must be defined in buildspec.yml
 	# FOD_TENANT
 	# FOD_USER	
@@ -13,8 +13,8 @@
 fod_url='https://ams.fortify.com'
 fod_api_url='https://api.ams.fortify.com/'
 fod_uploader_opts='-ep 2 -pp 0 -I 1 -apf'
-fod_notes="Triggered by AWS Codestar"
-scancentral_client_version='22.2.0'
+fod_notes="Triggered by AWS CodeBuild"
+scancentral_client_version='23.1.0'
 fod_uploader_version='5.4.0'
 fcli_version='v1.1.0'
 fcli_sha='5553766f0f771abdf27f4c6b6d38a34825a64aaa5d72cfd03c68d7e2f43a49a0'
@@ -52,7 +52,7 @@ fcli tool sc-client install $scancentral_client_version -d $scancentral_home
 fcli tool fodupload install $fod_uploader_version -d $fod_uploader_home
 
 # Generate Package for upload to Fortify on Demand
-zip -r package.zip .
+scancentral package -oss-o package.zip
 
 
 echo "INFO: start submitting scan"
