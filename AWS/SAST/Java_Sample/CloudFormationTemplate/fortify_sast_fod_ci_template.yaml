@@ -1,0 +1,513 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  CloudFormation template for deploying a Fortify enabled CI pipeline for security testing
+  changes to AWS CloudFormation templates stored in a fortify github repository.
+Parameters:
+  RepositoryName:
+    Description: CodeComit repository name
+    Type: String
+    Default: IWAJava
+  BranchName:
+    Default: master
+    Description: Choose which Branch do you want to use
+    Type: String
+  FoDURL:
+    Description: Fortify On Demand URL
+    Type: String
+    Default: https://ams.fortify.com/
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 40
+    MinLength: 1
+  FoDAPIURL:
+    Description: Fortify On Demand URL
+    Type: String
+    Default: https://api.ams.fortify.com/
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 40
+    MinLength: 1    
+  FoDTenant:
+    Description: Fortify On Demand Tenant
+    Type: String
+    Default: TENANTCODE
+    AllowedPattern: ^[A-Za-z0-9-.]*$
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 40
+    MinLength: 1
+  FoDUser:
+    Description: Fortify On Demand User
+    Type: String
+    Default: USERNAME
+    AllowedPattern: ^[a-zA-Z0-9-.]*$
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 40
+    MinLength: 1
+  FoDPAT:
+    Description: Fortify On Demand PAT
+    Type: String
+    Default: PAT
+    AllowedPattern: ^[A-Za-z0-9]*$
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 100
+    MinLength: 1
+  FoDReleaseID:
+    Description: Fortify release id 
+    Type: String
+    Default: 202932
+    AllowedPattern: ^[A-Za-z0-9]*$
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 20
+    MinLength: 1
+  Environment:
+    Description: Environment to deploy. Use staging for limited resources and no alerts.
+    Type: String
+    Default: Staging
+    AllowedValues:
+    - Staging
+    - Production
+  
+Metadata:
+  LICENSE: 'MIT 1.0 License'
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Fortify On Demand Scan
+      Parameters:
+      - FoDURL
+      - FoDAPIURL
+      - FoDTenant
+      - FoDUser
+      - FoDPAT
+      - FoDReleaseID
+    - Label:
+        default: Choose Repo, Branch and Environment
+      Parameters:
+      - RepositoryName
+      - Environment
+      - BranchName 
+Resources:
+  ArtifactBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: Private
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionExpirationInDays: 30
+            Status: Enabled
+      VersioningConfiguration:
+        Status: Enabled    
+
+  cleanupBucketOnDelete:
+    DependsOn: cleanupBucketOnDeleteLambda
+    Type: Custom::cleanupbucket
+    Properties:
+      ServiceToken: 
+       Fn::GetAtt: 
+          - "cleanupBucketOnDeleteLambda"
+          - "Arn"
+      BucketName: !Ref ArtifactBucket
+
+  Secrets:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-Secrets
+      Description: Fortify CI secrets.
+      SecretString: !Sub |-
+        {
+          "FoDURL": "${FoDURL}",
+          "FoDReleaseId": "${FoDReleaseID}"
+        }
+  ### SSM ParameterStore entry to store sensitive information
+  SSMParameterForFoDURL:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-URL
+      Type: StringList 
+      Value: !Ref FoDURL
+  SSMParameterForFoDAPIURL:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-APIURL
+      Type: StringList 
+      Value: !Ref FoDAPIURL
+  SSMParameterForFoDTenant:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-Tenant
+      Type: StringList 
+      Value: !Ref FoDTenant
+  SSMParameterForFoDUser:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-User
+      Type: StringList 
+      Value: !Ref FoDUser
+  SSMParameterForFoDPAT:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-PAT
+      Type: StringList 
+      Value: !Ref FoDPAT          
+  SSMParameterForFoDReleaseID:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-ReleaseId
+      Type: StringList 
+      Value: !Ref FoDReleaseID
+  ### CloudWatch LogGroup for storing pipeline logs
+  CloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub ${AWS::StackName}-pipeline-logs
+      RetentionInDays: 7
+  #### Build creation
+  CodeBuild:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Description: !Sub 'Submit build jobs for ${RepositoryName} as part of a CI/CD pipeline.'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: 'aws/codebuild/standard:7.0'
+        EnvironmentVariables:
+          - Name: SOURCE_BRANCH
+            Value: !Ref RepositoryName
+        PrivilegedMode: true
+      Visibility: PRIVATE
+      Source:
+        Type: CODEPIPELINE
+        GitCloneDepth: 1
+        BuildSpec: !Sub |
+          version: 0.2
+
+          env:
+            shell: bash
+            secrets-manager:
+              FoDURL: ${Secrets}:FoDURL
+              FoDReleaseId: ${Secrets}:FoDReleaseId
+          phases:
+            install:
+              runtime-versions:
+                java: corretto17
+              commands:
+                - echo "Entered the install phase..."
+                - pip install --upgrade awscli
+            pre_build:
+              commands:
+                - echo "Entered the pre_build phase..."
+                - mvn clean
+            build:
+              commands:
+                - echo "Entered the build phase..."
+                - mvn -Pwar clean package
+
+      LogsConfig:
+          CloudWatchLogs:
+            GroupName: !Ref CloudWatchLogGroup
+            Status: ENABLED
+            StreamName: FoDAnalysis        
+      Tags:
+        - Key: pipeline-name
+          Value: !Sub ${AWS::StackName}-pipeline
+
+  CodeScan:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Description: !Sub 'Submit Fortify Scan jobs for ${RepositoryName} as part of a CI/CD pipeline.'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: 'aws/codebuild/standard:7.0'
+        EnvironmentVariables:
+          - Name: SOURCE_BRANCH
+            Value: !Ref RepositoryName
+          - Name: FOD_URL
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDURL
+          - Name: FOD_API_URL
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDAPIURL
+          - Name: FOD_TENANT
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDTenant
+          - Name: FOD_USER
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDUser
+          - Name: FOD_PAT
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDPAT                  
+          - Name: FOD_RELEASE_ID
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDReleaseID
+        PrivilegedMode: true
+      Visibility: PRIVATE
+      Source:
+        Type: CODEPIPELINE
+        GitCloneDepth: 1
+        BuildSpec: !Sub |
+          version: 0.2
+
+          env:
+            shell: bash
+            secrets-manager:
+              FoDURL: ${Secrets}:FoDURL
+              FoDReleaseId: ${Secrets}:FoDReleaseId
+          phases:
+            install:
+              runtime-versions:
+                java: corretto17
+              commands:
+                - echo "Entered the install phase..."
+            build:
+              commands:
+                - echo "Entered the build phase..."
+                - fod_uploader_opts='-ep 2 -pp 0 -I 1 -apf'
+                - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "cd /data && scancentral package -bt mvn -o package.zip && FoDUpload -z package.zip -aurl $FOD_API_URL -purl $FOD_URL -rid $FOD_RELEASE_ID -tc $FOD_TENANT -uc $FOD_USER $FOD_PAT $fod_uploader_opts -n 'trigger by cfn'"
+                - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "FortifyVulnerabilityExporter FoDToJsonRaw --fod.baseUrl=$FOD_URL --fod.tenant=$FOD_TENANT --fod.user=$FOD_USER --fod.password=$FOD_PAT --fod.release.id=$FOD_RELEASE_ID --json.raw.output.file=/data/fortify-report.json --json.raw.output.stdout=false"
+                - aws lambda invoke --function-name=fortify_aws_hub_parser --payload=file://fortify-report.json --cli-binary-format raw-in-base64-out fortify_scan_report.json
+      LogsConfig:
+          CloudWatchLogs:
+            GroupName: !Ref CloudWatchLogGroup
+            Status: ENABLED
+            StreamName: FoDAnalysis        
+      Tags:
+        - Key: pipeline-name
+          Value: !Sub ${AWS::StackName}-pipeline
+
+
+  #### Codepipeline creation 
+  AppPipeline:
+    Type: 'AWS::CodePipeline::Pipeline'
+    Properties:
+      Name: !Sub ${AWS::StackName}-pipeline
+      RoleArn: !GetAtt 
+        - CodePipelineServiceRole
+        - Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source # Valid categories "Source", "Build", "Test", "Deploy", "Invoke", and "Approval"
+                Owner: AWS  # 3 valid values - AWS, Thirdparty, and custom
+                Version: '1'
+                Provider: CodeCommit # Depends on the Ation Category, various Action Provider options are available. Refer to codepipeline CF template documentation.
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration: # for each action provider, the configuration parameters differ. Refer to codepipeline structure reference documentation. https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
+                BranchName: !Ref BranchName
+                RepositoryName: !Ref RepositoryName
+                PollForSourceChanges: false
+              RunOrder: 1   
+
+        ### Build stage for Maven app        
+        - Name: Build
+          Actions:
+            - Name: MavenBuild
+              InputArtifacts:
+                - Name: SourceOutput
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts: 
+                - Name: BuildArtifacts
+              Configuration:
+                ProjectName: !Ref CodeBuild
+              RunOrder: 2
+
+        ### Build stage for SAST analysis         
+        - Name: Test
+          Actions:
+            - Name: FoDAnalysis
+              InputArtifacts:
+                - Name: SourceOutput
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts: 
+                - Name: FortifyArtifacts
+              Configuration:
+                ProjectName: !Ref CodeScan
+              RunOrder: 3              
+      ### Store build artifacts in S3 bucket
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Tags:
+        - Key: pipeline-name
+          Value: !Sub ${AWS::StackName}-pipeline 
+
+  #### Custom Lambda function
+  cleanupBucketOnDeleteLambda:
+    DependsOn: ArtifactBucket
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+       ZipFile: !Sub |
+          #!/usr/bin/env python
+          # -*- coding: utf-8 -*-
+
+          import json, boto3, logging
+          import cfnresponse
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              logger.info("event: {}".format(event))
+              try:
+                  bucket = event['ResourceProperties']['BucketName']
+                  logger.info("bucket: {}, event['RequestType']: {}".format(bucket,event['RequestType']))
+                  if event['RequestType'] == 'Delete':
+                      s3 = boto3.resource('s3')
+                      bucket = s3.Bucket(bucket)
+                      for obj in bucket.objects.filter():
+                          logger.info("delete obj: {}".format(obj))
+                          bucket.object_versions.filter(Prefix=obj.key).delete()
+                          #s3.Object(bucket.name, obj.key).delete()
+
+                  sendResponseCfn(event, context, cfnresponse.SUCCESS)
+              except Exception as e:
+                  logger.info("Exception: {}".format(e))
+                  sendResponseCfn(event, context, cfnresponse.FAILED)
+
+          def sendResponseCfn(event, context, responseStatus):
+              responseData = {}
+              responseData['Data'] = {}
+              cfnresponse.send(event, context, responseStatus, responseData, "CustomResourcePhysicalID")            
+      Description: cleanup Bucket on Delete Lambda Lambda function.
+      # FunctionName: lambda_function
+      Handler: index.lambda_handler
+      Role : !GetAtt CleanupBucketOnDeleteLambdaRole.Arn
+      Runtime: python3.7
+      MemorySize: 128
+      Timeout: 60  
+
+  ### IAM Roles for the stack
+  CodeBuildServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 'sts:AssumeRole'
+            Principal:
+              Service: codebuild.amazonaws.com
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess'
+  CleanupBucketOnDeleteLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: FoD-CICD-CleanupBucketOnDeleteLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            - s3:*
+            Resource: '*'
+          - Effect: Deny
+            Action:
+            - s3:DeleteBucket
+            Resource: '*'
+  CodePipelineServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 'sts:AssumeRole'
+            Principal:
+              Service: codepipeline.amazonaws.com
+      Policies:
+        - PolicyName: FoD-CICD-CodePipelineService
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'codecommit:CancelUploadArchive'
+                  - 'codecommit:GetBranch'
+                  - 'codecommit:GetCommit'
+                  - 'codecommit:GetUploadArchiveStatus'
+                  - 'codecommit:UploadArchive'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'codedeploy:CreateDeployment'
+                  - 'codedeploy:GetApplicationRevision'
+                  - 'codedeploy:GetDeployment'
+                  - 'codedeploy:GetDeploymentConfig'
+                  - 'codedeploy:RegisterApplicationRevision'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'codebuild:BatchGetBuilds'
+                  - 'codebuild:StartBuild'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'devicefarm:ListProjects'
+                  - 'devicefarm:ListDevicePools'
+                  - 'devicefarm:GetRun'
+                  - 'devicefarm:GetUpload'
+                  - 'devicefarm:CreateUpload'
+                  - 'devicefarm:ScheduleRun'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'lambda:InvokeFunction'
+                  - 'lambda:ListFunctions'
+                  - 'lambda:CreateFunction'
+                  - 'lambda:UpdateFunctionConfiguration'
+                  - 'lambda:UpdateFunctionCode'
+                  - 'lambda:TagResource'
+                  - 'lambda:PublishVersion'
+                  - 'lambda:GetFunctionConfiguration'
+                  - 'lambda:GetFunction'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'iam:PassRole'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'elasticbeanstalk:*'
+                  - 'ec2:*'
+                  - 'elasticloadbalancing:*'
+                  - 'autoscaling:*'
+                  - 'cloudwatch:*'
+                  - 's3:*'
+                  - 'sns:*'
+                  - 'cloudformation:*'
+                  - 'rds:*'
+                  - 'sqs:*'
+                  - 'ecs:*'
+                  - 'logs:*'
+                  - 'kms:*'
+                  - 'ecr:*'
+                Resource: '*'
