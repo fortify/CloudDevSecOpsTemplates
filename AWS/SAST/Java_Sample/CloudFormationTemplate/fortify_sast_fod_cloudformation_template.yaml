@@ -1,12 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-  CloudFormation template for deploying a Fortify enabled CI pipeline for security testing
-  changes to AWS CloudFormation templates stored in a fortify github repository.
+  CloudFormation template for deploying a Fortify on Demand enabled CI pipeline for security testing
+  changes to AWS CloudFormation templates stored in a Fortify GitHub repository.
 Parameters:
   RepositoryName:
     Description: CodeComit repository name
     Type: String
-    Default: IWAJava
+    Default: RepoName
   BranchName:
     Default: master
     Description: Choose which Branch do you want to use
@@ -19,7 +19,7 @@ Parameters:
     MaxLength: 40
     MinLength: 1
   FoDAPIURL:
-    Description: Fortify On Demand URL
+    Description: Fortify On Demand API URL
     Type: String
     Default: https://api.ams.fortify.com/
     ConstraintDescription: must contain only alphanumeric characters and numbers.
@@ -57,13 +57,6 @@ Parameters:
     ConstraintDescription: must contain only alphanumeric characters and numbers.
     MaxLength: 20
     MinLength: 1
-  Environment:
-    Description: Environment to deploy. Use staging for limited resources and no alerts.
-    Type: String
-    Default: Staging
-    AllowedValues:
-    - Staging
-    - Production
   
 Metadata:
   LICENSE: 'MIT 1.0 License'
@@ -73,16 +66,14 @@ Metadata:
         default: Fortify On Demand Scan
       Parameters:
       - FoDURL
-      - FoDAPIURL
       - FoDTenant
       - FoDUser
       - FoDPAT
       - FoDReleaseID
     - Label:
-        default: Choose Repo, Branch and Environment
+        default: Choose Repo, Branch and FoD Parameters
       Parameters:
       - RepositoryName
-      - Environment
       - BranchName 
 Resources:
   ArtifactBucket:
@@ -113,8 +104,7 @@ Resources:
       Description: Fortify CI secrets.
       SecretString: !Sub |-
         {
-          "FoDURL": "${FoDURL}",
-          "FoDReleaseId": "${FoDReleaseID}"
+          "FoDPAT": "${FoDPAT}"
         }
   ### SSM ParameterStore entry to store sensitive information
   SSMParameterForFoDURL:
@@ -159,6 +149,13 @@ Resources:
     Properties: 
       LogGroupName: !Sub ${AWS::StackName}-pipeline-logs
       RetentionInDays: 7
+  ### Parser LogGroup for storing lambda logs
+  FortifyParserLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: "/aws/lambda/fortify-aws-security-hub-parser"
+      RetentionInDays: 7
+
   #### Build creation
   CodeBuild:
     Type: 'AWS::CodeBuild::Project'
@@ -185,15 +182,13 @@ Resources:
           env:
             shell: bash
             secrets-manager:
-              FoDURL: ${Secrets}:FoDURL
-              FoDReleaseId: ${Secrets}:FoDReleaseId
+              FoDPAT: ${Secrets}:FoDPAT
           phases:
             install:
               runtime-versions:
                 java: corretto17
               commands:
                 - echo "Entered the install phase..."
-                - pip install --upgrade awscli
             pre_build:
               commands:
                 - echo "Entered the pre_build phase..."
@@ -201,8 +196,7 @@ Resources:
             build:
               commands:
                 - echo "Entered the build phase..."
-                - mvn -Pwar clean package
-
+                - mvn clean package
       LogsConfig:
           CloudWatchLogs:
             GroupName: !Ref CloudWatchLogGroup
@@ -211,7 +205,7 @@ Resources:
       Tags:
         - Key: pipeline-name
           Value: !Sub ${AWS::StackName}-pipeline
-
+  #### Fortify Scan Action
   CodeScan:
     Type: 'AWS::CodeBuild::Project'
     Properties:
@@ -255,8 +249,7 @@ Resources:
           env:
             shell: bash
             secrets-manager:
-              FoDURL: ${Secrets}:FoDURL
-              FoDReleaseId: ${Secrets}:FoDReleaseId
+              FoDPAT: ${Secrets}:FoDPAT
           phases:
             install:
               runtime-versions:
@@ -267,9 +260,10 @@ Resources:
               commands:
                 - echo "Entered the build phase..."
                 - fod_uploader_opts='-ep 2 -pp 0 -I 1 -apf'
-                - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "cd /data && scancentral package -bt mvn -o package.zip && FoDUpload -z package.zip -aurl $FOD_API_URL -purl $FOD_URL -rid $FOD_RELEASE_ID -tc $FOD_TENANT -uc $FOD_USER $FOD_PAT $fod_uploader_opts -n 'trigger by cfn'"
+                - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "cd /data && scancentral package -bt mvn -o package.zip -oss"
+                - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "cd /data && export FCLI_DEFAULT_FOD_URL=$FOD_URL && export FCLI_DEFAULT_FOD_USER=$FOD_USER && export FCLI_DEFAULT_FOD_PASSWORD=$FOD_PAT && export FCLI_DEFAULT_FOD_TENANT=$FOD_TENANT && fcli fod session login && fcli fod sast start --release=$FOD_RELEASE_ID --file=package.zip --remediation=NonRemediationScanOnly && fcli fod session logout"
                 - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "FortifyVulnerabilityExporter FoDToJsonRaw --fod.baseUrl=$FOD_URL --fod.tenant=$FOD_TENANT --fod.user=$FOD_USER --fod.password=$FOD_PAT --fod.release.id=$FOD_RELEASE_ID --json.raw.output.file=/data/fortify-report.json --json.raw.output.stdout=false"
-                - aws lambda invoke --function-name=fortify_aws_hub_parser --payload=file://fortify-report.json --cli-binary-format raw-in-base64-out fortify_scan_report.json
+                - aws lambda invoke --function-name=fortify-aws-security-hub-parser --payload=file://fortify-report.json --cli-binary-format raw-in-base64-out fortify_scan_report.json
       LogsConfig:
           CloudWatchLogs:
             GroupName: !Ref CloudWatchLogGroup
@@ -278,8 +272,6 @@ Resources:
       Tags:
         - Key: pipeline-name
           Value: !Sub ${AWS::StackName}-pipeline
-
-
   #### Codepipeline creation 
   AppPipeline:
     Type: 'AWS::CodePipeline::Pipeline'
@@ -390,8 +382,250 @@ Resources:
       Runtime: python3.7
       MemorySize: 128
       Timeout: 60  
+  #### Custom Lambda function for Fortify Parser
+  FortifyAwsHubParser:
+    Type: "AWS::Lambda::Function"
+    DependsOn: FortifyParserLogGroup
+    Properties:
+      Code:  
+        ZipFile: !Sub |
+          """
+          Imports finding in Security Hub and upload the reports to S3 
+          Copyright OpenText. All Rights Reserved.
+          SPDX-License-Identifier: MIT-0
+          """
+
+          import os
+          import json
+          import logging
+          import boto3
+          import datetime
+          import re
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.DEBUG)
+
+          def send_finding_security_hub(allVulList):
+              # local parameters
+              PRODUCT_TITLE = "Fortify SAST"
+              COMPANY_NAME = "OpenText"
+
+              # import sechub + sts boto3 client
+              securityhub = boto3.client('securityhub')
+              sts = boto3.client('sts')    
+              
+              # retrieve account id from STS GetCallerID
+              getAccount = sts.get_caller_identity()
+              awsAccount = str(getAccount['Account'])
+              awsRegion = os.environ['AWS_REGION']
+              
+              logger.info("updating vulnerabilities into SecurityHub")
+              #logger.info(allVulList)
+              if (len(allVulList) <= 0):
+                  logger.error("No vulnerabilities to add")
+              for vul in allVulList:
+                  # create ISO 8601 timestamp
+                  iso8601Time = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+                  if "all_data" in vul: 
+                      normilizedRecommendation=remove_html_tags(vul['all_data']['recommendations']['recommendations'])
+                      sDesc=remove_html_tags(vul['all_data']['details']['summary'])
+                  else:
+                      normilizedRecommendation=remove_html_tags(vul['details']['recommendation'])
+                      sDesc=remove_html_tags(vul['details']['brief'])
+                  
+                  if "release" in vul:
+                      sAppName=vul['release']['applicationName']
+                      sAppVersion=vul['release']['releaseName']
+                  else:
+                      sAppName=vul['applicationVersion']['project']['name']
+                      sAppVersion=vul['applicationVersion']['name']
+                  
+                  if "friority" in vul:
+                      friority = str(vul['friority']).upper()
+                  else:
+                      friority = str(vul['severityString']).upper()
+                      
+                  # map Trivy severity to ASFF severity
+                  if friority == "LOW":
+                      fortifySev = int(1)
+                      fortifyAsffRating = fortifySev * 10
+                  elif friority == "MEDIUM":
+                      fortifySev = int(4)
+                      fortifyAsffRating = fortifySev * 10
+                  elif friority == "HIGH":
+                      fortifySev = int(7)
+                      fortifyAsffRating = fortifySev * 10
+                  elif friority == "CRITICAL":
+                      fortifySev = int(9)
+                      fortifyAsffRating = fortifySev * 10
+                  else:
+                      logger.error("No vulnerability severity information found")
+                  try:
+                      if "projectVersionId" in vul:
+                          vulId = str(vul['projectVersionId']) + "-" + str(vul['id'])
+                          sReleaseId=str(vul['projectVersionId'])
+                      else:
+                          vulId = str(vul['releaseId']) + "-" + str(vul['id'])
+                          sReleaseId=str(vul['releaseId'])
+                      
+                      if "issueName" in vul:
+                          catName = vul['issueName']
+                      else:
+                          catName = vul['category']
+                          
+                      if "issueInstanceId" in vul:
+                          sInstId = vul['issueInstanceId']
+                      else:
+                          sInstId = vul['instanceId']
+                      
+                      if "primaryLocationFull" in vul:
+                          sPrimeLocation=vul['primaryLocationFull']
+                      else:
+                          sPrimeLocation=vul['primaryLocation']
+                          
+                      response = securityhub.batch_import_findings(
+                          Findings=[
+                              {
+                                  'SchemaVersion': '2018-10-08',
+                                  'Id': vulId,
+                                  'ProductArn': "arn:aws:securityhub:"+ awsRegion +":" + awsAccount +":product/" + awsAccount +"/default", 
+                                  "ProductName": PRODUCT_TITLE,
+                                  'GeneratorId': "arn:aws:securityhub:"+ awsRegion +":" + awsAccount +":product/" + awsAccount +"/default",
+                                  "CompanyName": COMPANY_NAME,
+                                  'AwsAccountId': awsAccount,
+                                  'Types': [ 'Software and Configuration Checks/Vulnerabilities/CVE' ],
+                                  'CreatedAt': iso8601Time,
+                                  'UpdatedAt': iso8601Time,
+                                  'Severity': {
+                                      'Original': friority,
+                                      'Normalized': fortifyAsffRating
+                                  },
+                                  'Title': catName,
+                                  'Description': sDesc,
+                                  'Remediation': {
+                                      'Recommendation': {
+                                          'Text': (normilizedRecommendation[:510] + '..') if len(normilizedRecommendation) > 510 else normilizedRecommendation,
+                                          'Url': vul['deepLink']
+                                      }
+                                  },
+                                  'ProductFields': { 
+                                      'Product Name': PRODUCT_TITLE, 
+                                      'aws/securityhub/CompanyName': COMPANY_NAME,
+                                      'aws/securityhub/ProductName': PRODUCT_TITLE
+                                  },
+                                  'Resources': [
+                                      {
+                                          'Type': 'Application',
+                                          'Id': vulId,
+                                          'Partition': 'aws',
+                                          'Region': awsRegion,
+                                          'Details': {
+                                              'Other': {
+                                                  'APPLICATION ': sReleaseId,
+                                                  'APPLICATION NAME': sAppName,
+                                                  'APPLICATION VERSION': sAppVersion,
+                                                  'PRIMARY LOCATION': sPrimeLocation,
+                                                  'LINE NUMBER': str(vul['lineNumber']),
+                                                  'INSTANCE ID': sInstId
+                                              }
+                                          }
+                                      },
+                                  ],
+                                  'RecordState': 'ACTIVE'
+                              }
+                          ]
+                      )
+                      print(response)
+                  except Exception as e:
+                      print(e)
+                      raise
+
+          def process_message(event):
+              # processing json
+              out_index = 0
+              vullist = []
+              for vul in event['vulnerabilities']:
+                  isDebricked = 0
+                  if "all_data" in vul:
+                      if str(vul['all_data']['details']['analyzerName']).lower() == "debricked":
+                          isDebricked = 1
+                          
+                  if isDebricked == 0:
+                      vullist.append(vul)
+                      
+                  if len(vullist) == 90:
+                      #adding vulnerabilities to Security Hub
+                      send_finding_security_hub(vullist)
+                      vullist = []
+                      out_index += 1
+
+              # dump the last batch
+              if len(vullist) > 0:
+                  #adding vulnerabilities to Security Hub
+                  send_finding_security_hub(vullist)        
+              
+          def lambda_handler(event, context):
+              # Lambda entrypoint 
+              try:
+                  logger.info("Starting function...")
+                  parsed_json = parse_json(event)
+                  return process_message(parsed_json)
+              except Exception as error:
+                  logger.error("Error {}".format(error))
+                  raise
+
+          def remove_html_tags(text):
+              # Remove html tags from a string
+              clean = re.compile('<.*?>')
+              return re.sub(clean, '', text)
+
+          def parse_json(event):
+              # parsing json
+              try:
+                  d1 = json.dumps(event)
+                  json_data = json.loads(d1)
+                  return json_data
+              except Exception as err:
+                  logger.error("Error parsing json: {}".format(err))
+                  raise
+                  
+      Description: Fortify Parser for AWS security hub.
+      FunctionName: fortify-aws-security-hub-parser
+      Handler: index.lambda_handler
+      Role: !GetAtt FortifyParserLambdaRole.Arn
+      Runtime: python3.11
+      MemorySize: 128
+      Timeout: 300
 
   ### IAM Roles for the stack
+  FortifyParserLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: Fortify-Policy-SecurityHubParserLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - securityhub:*
+            - iam:CreateServiceLinkedRole
+            - guardduty:GetDetector
+            - guardduty:ListDetectors
+            - inspector2:BatchGetAccountStatus
+            Resource: '*'
   CodeBuildServiceRole:
     Type: 'AWS::IAM::Role'
     Properties:
