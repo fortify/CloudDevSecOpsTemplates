@@ -1,0 +1,23 @@
+version: 0.2
+env:
+  shell: bash
+  secret-manager:
+        FoDPAT: ${Secrets}:FoDPAT
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+    commands:
+      # Upgrade AWS CLI to the latest version
+      #- pip install --upgrade awscli
+  pre_build:
+    commands:
+      #- mvn clean compile test
+      - echo "Entered the install phase..."
+  build:
+    commands:
+      - echo "Entered the build phase..."
+      - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "cd /data && scancentral package -bt mvn -o package.zip -oss"
+      - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "cd /data && export FCLI_DEFAULT_FOD_URL=$FOD_URL && export FCLI_DEFAULT_FOD_USER=$FOD_USER && export FCLI_DEFAULT_FOD_PASSWORD=$FOD_PAT && export FCLI_DEFAULT_FOD_TENANT=$FOD_TENANT && fcli fod session login && fcli fod sast start --release=$FOD_RELEASE_ID --file=package.zip --remediation=NonRemediationScanOnly && fcli fod session logout"
+      - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "FortifyVulnerabilityExporter FoDToJsonRaw --fod.baseUrl=$FOD_URL --fod.tenant=$FOD_TENANT --fod.user=$FOD_USER --fod.password=$FOD_PAT --fod.release.id=$FOD_RELEASE_ID --json.raw.output.file=/data/fortify-report.json --json.raw.output.stdout=false"
+      - aws lambda invoke --function-name=fortify-aws-security-hub-parser --payload=file://fortify-report.json --cli-binary-format raw-in-base64-out fortify_scan_report.json

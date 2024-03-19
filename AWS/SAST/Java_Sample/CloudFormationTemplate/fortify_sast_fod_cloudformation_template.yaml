@@ -1,0 +1,747 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  CloudFormation template for deploying a Fortify on Demand enabled CI pipeline for security testing
+  changes to AWS CloudFormation templates stored in a Fortify GitHub repository.
+Parameters:
+  RepositoryName:
+    Description: CodeComit repository name
+    Type: String
+    Default: RepoName
+  BranchName:
+    Default: master
+    Description: Choose which Branch do you want to use
+    Type: String
+  FoDURL:
+    Description: Fortify On Demand URL
+    Type: String
+    Default: https://ams.fortify.com/
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 40
+    MinLength: 1
+  FoDAPIURL:
+    Description: Fortify On Demand API URL
+    Type: String
+    Default: https://api.ams.fortify.com/
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 40
+    MinLength: 1    
+  FoDTenant:
+    Description: Fortify On Demand Tenant
+    Type: String
+    Default: TENANTCODE
+    AllowedPattern: ^[A-Za-z0-9-.]*$
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 40
+    MinLength: 1
+  FoDUser:
+    Description: Fortify On Demand User
+    Type: String
+    Default: USERNAME
+    AllowedPattern: ^[a-zA-Z0-9-.]*$
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 40
+    MinLength: 1
+  FoDPAT:
+    Description: Fortify On Demand PAT
+    Type: String
+    Default: PAT
+    AllowedPattern: ^[A-Za-z0-9]*$
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 100
+    MinLength: 1
+  FoDReleaseID:
+    Description: Fortify release id 
+    Type: String
+    Default: 202932
+    AllowedPattern: ^[A-Za-z0-9]*$
+    ConstraintDescription: must contain only alphanumeric characters and numbers.
+    MaxLength: 20
+    MinLength: 1
+  
+Metadata:
+  LICENSE: 'MIT 1.0 License'
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Fortify On Demand Scan
+      Parameters:
+      - FoDURL
+      - FoDTenant
+      - FoDUser
+      - FoDPAT
+      - FoDReleaseID
+    - Label:
+        default: Choose Repo, Branch and FoD Parameters
+      Parameters:
+      - RepositoryName
+      - BranchName 
+Resources:
+  ArtifactBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: Private
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionExpirationInDays: 30
+            Status: Enabled
+      VersioningConfiguration:
+        Status: Enabled    
+
+  cleanupBucketOnDelete:
+    DependsOn: cleanupBucketOnDeleteLambda
+    Type: Custom::cleanupbucket
+    Properties:
+      ServiceToken: 
+       Fn::GetAtt: 
+          - "cleanupBucketOnDeleteLambda"
+          - "Arn"
+      BucketName: !Ref ArtifactBucket
+
+  Secrets:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-Secrets
+      Description: Fortify CI secrets.
+      SecretString: !Sub |-
+        {
+          "FoDPAT": "${FoDPAT}"
+        }
+  ### SSM ParameterStore entry to store sensitive information
+  SSMParameterForFoDURL:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-URL
+      Type: StringList 
+      Value: !Ref FoDURL
+  SSMParameterForFoDAPIURL:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-APIURL
+      Type: StringList 
+      Value: !Ref FoDAPIURL
+  SSMParameterForFoDTenant:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-Tenant
+      Type: StringList 
+      Value: !Ref FoDTenant
+  SSMParameterForFoDUser:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-User
+      Type: StringList 
+      Value: !Ref FoDUser
+  SSMParameterForFoDPAT:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-PAT
+      Type: StringList 
+      Value: !Ref FoDPAT          
+  SSMParameterForFoDReleaseID:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: !Sub ${AWS::StackName}-FoD-ReleaseId
+      Type: StringList 
+      Value: !Ref FoDReleaseID
+  ### CloudWatch LogGroup for storing pipeline logs
+  CloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub ${AWS::StackName}-pipeline-logs
+      RetentionInDays: 7
+  ### Parser LogGroup for storing lambda logs
+  FortifyParserLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: "/aws/lambda/fortify-aws-security-hub-parser"
+      RetentionInDays: 7
+
+  #### Build creation
+  CodeBuild:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Description: !Sub 'Submit build jobs for ${RepositoryName} as part of a CI/CD pipeline.'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: 'aws/codebuild/standard:7.0'
+        EnvironmentVariables:
+          - Name: SOURCE_BRANCH
+            Value: !Ref RepositoryName
+        PrivilegedMode: true
+      Visibility: PRIVATE
+      Source:
+        Type: CODEPIPELINE
+        GitCloneDepth: 1
+        BuildSpec: !Sub |
+          version: 0.2
+
+          env:
+            shell: bash
+            secrets-manager:
+              FoDPAT: ${Secrets}:FoDPAT
+          phases:
+            install:
+              runtime-versions:
+                java: corretto17
+              commands:
+                - echo "Entered the install phase..."
+            pre_build:
+              commands:
+                - echo "Entered the pre_build phase..."
+                - mvn clean
+            build:
+              commands:
+                - echo "Entered the build phase..."
+                - mvn clean package
+      LogsConfig:
+          CloudWatchLogs:
+            GroupName: !Ref CloudWatchLogGroup
+            Status: ENABLED
+            StreamName: FoDAnalysis        
+      Tags:
+        - Key: pipeline-name
+          Value: !Sub ${AWS::StackName}-pipeline
+  #### Fortify Scan Action
+  CodeScan:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Description: !Sub 'Submit Fortify Scan jobs for ${RepositoryName} as part of a CI/CD pipeline.'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: 'aws/codebuild/standard:7.0'
+        EnvironmentVariables:
+          - Name: SOURCE_BRANCH
+            Value: !Ref RepositoryName
+          - Name: FOD_URL
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDURL
+          - Name: FOD_API_URL
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDAPIURL
+          - Name: FOD_TENANT
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDTenant
+          - Name: FOD_USER
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDUser
+          - Name: FOD_PAT
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDPAT                  
+          - Name: FOD_RELEASE_ID
+            Type: PARAMETER_STORE
+            Value: !Ref SSMParameterForFoDReleaseID
+        PrivilegedMode: true
+      Visibility: PRIVATE
+      Source:
+        Type: CODEPIPELINE
+        GitCloneDepth: 1
+        BuildSpec: !Sub |
+          version: 0.2
+
+          env:
+            shell: bash
+            secrets-manager:
+              FoDPAT: ${Secrets}:FoDPAT
+          phases:
+            install:
+              runtime-versions:
+                java: corretto17
+              commands:
+                - echo "Entered the install phase..."
+            build:
+              commands:
+                - echo "Entered the build phase..."
+                - fod_uploader_opts='-ep 2 -pp 0 -I 1 -apf'
+                - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "cd /data && scancentral package -bt mvn -o package.zip -oss"
+                - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "cd /data && export FCLI_DEFAULT_FOD_URL=$FOD_URL && export FCLI_DEFAULT_FOD_USER=$FOD_USER && export FCLI_DEFAULT_FOD_PASSWORD=$FOD_PAT && export FCLI_DEFAULT_FOD_TENANT=$FOD_TENANT && fcli fod session login && fcli fod sast start --release=$FOD_RELEASE_ID --file=package.zip --remediation=NonRemediationScanOnly && fcli fod session logout"
+                - docker run --rm -v $PWD:/data fortifydocker/fortify-ci-tools:latest-jdk-17 sh -c "FortifyVulnerabilityExporter FoDToJsonRaw --fod.baseUrl=$FOD_URL --fod.tenant=$FOD_TENANT --fod.user=$FOD_USER --fod.password=$FOD_PAT --fod.release.id=$FOD_RELEASE_ID --json.raw.output.file=/data/fortify-report.json --json.raw.output.stdout=false"
+                - aws lambda invoke --function-name=fortify-aws-security-hub-parser --payload=file://fortify-report.json --cli-binary-format raw-in-base64-out fortify_scan_report.json
+      LogsConfig:
+          CloudWatchLogs:
+            GroupName: !Ref CloudWatchLogGroup
+            Status: ENABLED
+            StreamName: FoDAnalysis        
+      Tags:
+        - Key: pipeline-name
+          Value: !Sub ${AWS::StackName}-pipeline
+  #### Codepipeline creation 
+  AppPipeline:
+    Type: 'AWS::CodePipeline::Pipeline'
+    Properties:
+      Name: !Sub ${AWS::StackName}-pipeline
+      RoleArn: !GetAtt 
+        - CodePipelineServiceRole
+        - Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source # Valid categories "Source", "Build", "Test", "Deploy", "Invoke", and "Approval"
+                Owner: AWS  # 3 valid values - AWS, Thirdparty, and custom
+                Version: '1'
+                Provider: CodeCommit # Depends on the Ation Category, various Action Provider options are available. Refer to codepipeline CF template documentation.
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration: # for each action provider, the configuration parameters differ. Refer to codepipeline structure reference documentation. https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
+                BranchName: !Ref BranchName
+                RepositoryName: !Ref RepositoryName
+                PollForSourceChanges: false
+              RunOrder: 1   
+
+        ### Build stage for Maven app        
+        - Name: Build
+          Actions:
+            - Name: MavenBuild
+              InputArtifacts:
+                - Name: SourceOutput
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts: 
+                - Name: BuildArtifacts
+              Configuration:
+                ProjectName: !Ref CodeBuild
+              RunOrder: 2
+
+        ### Build stage for SAST analysis         
+        - Name: Test
+          Actions:
+            - Name: FoDAnalysis
+              InputArtifacts:
+                - Name: SourceOutput
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts: 
+                - Name: FortifyArtifacts
+              Configuration:
+                ProjectName: !Ref CodeScan
+              RunOrder: 3              
+      ### Store build artifacts in S3 bucket
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Tags:
+        - Key: pipeline-name
+          Value: !Sub ${AWS::StackName}-pipeline 
+
+  #### Custom Lambda function
+  cleanupBucketOnDeleteLambda:
+    DependsOn: ArtifactBucket
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+       ZipFile: !Sub |
+          #!/usr/bin/env python
+          # -*- coding: utf-8 -*-
+
+          import json, boto3, logging
+          import cfnresponse
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              logger.info("event: {}".format(event))
+              try:
+                  bucket = event['ResourceProperties']['BucketName']
+                  logger.info("bucket: {}, event['RequestType']: {}".format(bucket,event['RequestType']))
+                  if event['RequestType'] == 'Delete':
+                      s3 = boto3.resource('s3')
+                      bucket = s3.Bucket(bucket)
+                      for obj in bucket.objects.filter():
+                          logger.info("delete obj: {}".format(obj))
+                          bucket.object_versions.filter(Prefix=obj.key).delete()
+                          #s3.Object(bucket.name, obj.key).delete()
+
+                  sendResponseCfn(event, context, cfnresponse.SUCCESS)
+              except Exception as e:
+                  logger.info("Exception: {}".format(e))
+                  sendResponseCfn(event, context, cfnresponse.FAILED)
+
+          def sendResponseCfn(event, context, responseStatus):
+              responseData = {}
+              responseData['Data'] = {}
+              cfnresponse.send(event, context, responseStatus, responseData, "CustomResourcePhysicalID")            
+      Description: cleanup Bucket on Delete Lambda Lambda function.
+      # FunctionName: lambda_function
+      Handler: index.lambda_handler
+      Role : !GetAtt CleanupBucketOnDeleteLambdaRole.Arn
+      Runtime: python3.7
+      MemorySize: 128
+      Timeout: 60  
+  #### Custom Lambda function for Fortify Parser
+  FortifyAwsHubParser:
+    Type: "AWS::Lambda::Function"
+    DependsOn: FortifyParserLogGroup
+    Properties:
+      Code:  
+        ZipFile: !Sub |
+          """
+          Imports finding in Security Hub and upload the reports to S3 
+          Copyright OpenText. All Rights Reserved.
+          SPDX-License-Identifier: MIT-0
+          """
+
+          import os
+          import json
+          import logging
+          import boto3
+          import datetime
+          import re
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.DEBUG)
+
+          def send_finding_security_hub(allVulList):
+              # local parameters
+              PRODUCT_TITLE = "Fortify SAST"
+              COMPANY_NAME = "OpenText"
+
+              # import sechub + sts boto3 client
+              securityhub = boto3.client('securityhub')
+              sts = boto3.client('sts')    
+              
+              # retrieve account id from STS GetCallerID
+              getAccount = sts.get_caller_identity()
+              awsAccount = str(getAccount['Account'])
+              awsRegion = os.environ['AWS_REGION']
+              
+              logger.info("updating vulnerabilities into SecurityHub")
+              #logger.info(allVulList)
+              if (len(allVulList) <= 0):
+                  logger.error("No vulnerabilities to add")
+              for vul in allVulList:
+                  # create ISO 8601 timestamp
+                  iso8601Time = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+                  if "all_data" in vul: 
+                      normilizedRecommendation=remove_html_tags(vul['all_data']['recommendations']['recommendations'])
+                      sDesc=remove_html_tags(vul['all_data']['details']['summary'])
+                  else:
+                      normilizedRecommendation=remove_html_tags(vul['details']['recommendation'])
+                      sDesc=remove_html_tags(vul['details']['brief'])
+                  
+                  if "release" in vul:
+                      sAppName=vul['release']['applicationName']
+                      sAppVersion=vul['release']['releaseName']
+                  else:
+                      sAppName=vul['applicationVersion']['project']['name']
+                      sAppVersion=vul['applicationVersion']['name']
+                  
+                  if "friority" in vul:
+                      friority = str(vul['friority']).upper()
+                  else:
+                      friority = str(vul['severityString']).upper()
+                      
+                  # map Trivy severity to ASFF severity
+                  if friority == "LOW":
+                      fortifySev = int(1)
+                      fortifyAsffRating = fortifySev * 10
+                  elif friority == "MEDIUM":
+                      fortifySev = int(4)
+                      fortifyAsffRating = fortifySev * 10
+                  elif friority == "HIGH":
+                      fortifySev = int(7)
+                      fortifyAsffRating = fortifySev * 10
+                  elif friority == "CRITICAL":
+                      fortifySev = int(9)
+                      fortifyAsffRating = fortifySev * 10
+                  else:
+                      logger.error("No vulnerability severity information found")
+                  try:
+                      if "projectVersionId" in vul:
+                          vulId = str(vul['projectVersionId']) + "-" + str(vul['id'])
+                          sReleaseId=str(vul['projectVersionId'])
+                      else:
+                          vulId = str(vul['releaseId']) + "-" + str(vul['id'])
+                          sReleaseId=str(vul['releaseId'])
+                      
+                      if "issueName" in vul:
+                          catName = vul['issueName']
+                      else:
+                          catName = vul['category']
+                          
+                      if "issueInstanceId" in vul:
+                          sInstId = vul['issueInstanceId']
+                      else:
+                          sInstId = vul['instanceId']
+                      
+                      if "primaryLocationFull" in vul:
+                          sPrimeLocation=vul['primaryLocationFull']
+                      else:
+                          sPrimeLocation=vul['primaryLocation']
+                          
+                      response = securityhub.batch_import_findings(
+                          Findings=[
+                              {
+                                  'SchemaVersion': '2018-10-08',
+                                  'Id': vulId,
+                                  'ProductArn': "arn:aws:securityhub:"+ awsRegion +":" + awsAccount +":product/" + awsAccount +"/default", 
+                                  "ProductName": PRODUCT_TITLE,
+                                  'GeneratorId': "arn:aws:securityhub:"+ awsRegion +":" + awsAccount +":product/" + awsAccount +"/default",
+                                  "CompanyName": COMPANY_NAME,
+                                  'AwsAccountId': awsAccount,
+                                  'Types': [ 'Software and Configuration Checks/Vulnerabilities/CVE' ],
+                                  'CreatedAt': iso8601Time,
+                                  'UpdatedAt': iso8601Time,
+                                  'Severity': {
+                                      'Original': friority,
+                                      'Normalized': fortifyAsffRating
+                                  },
+                                  'Title': catName,
+                                  'Description': sDesc,
+                                  'Remediation': {
+                                      'Recommendation': {
+                                          'Text': (normilizedRecommendation[:510] + '..') if len(normilizedRecommendation) > 510 else normilizedRecommendation,
+                                          'Url': vul['deepLink']
+                                      }
+                                  },
+                                  'ProductFields': { 
+                                      'Product Name': PRODUCT_TITLE, 
+                                      'aws/securityhub/CompanyName': COMPANY_NAME,
+                                      'aws/securityhub/ProductName': PRODUCT_TITLE
+                                  },
+                                  'Resources': [
+                                      {
+                                          'Type': 'Application',
+                                          'Id': vulId,
+                                          'Partition': 'aws',
+                                          'Region': awsRegion,
+                                          'Details': {
+                                              'Other': {
+                                                  'APPLICATION ': sReleaseId,
+                                                  'APPLICATION NAME': sAppName,
+                                                  'APPLICATION VERSION': sAppVersion,
+                                                  'PRIMARY LOCATION': sPrimeLocation,
+                                                  'LINE NUMBER': str(vul['lineNumber']),
+                                                  'INSTANCE ID': sInstId
+                                              }
+                                          }
+                                      },
+                                  ],
+                                  'RecordState': 'ACTIVE'
+                              }
+                          ]
+                      )
+                      print(response)
+                  except Exception as e:
+                      print(e)
+                      raise
+
+          def process_message(event):
+              # processing json
+              out_index = 0
+              vullist = []
+              for vul in event['vulnerabilities']:
+                  isDebricked = 0
+                  if "all_data" in vul:
+                      if str(vul['all_data']['details']['analyzerName']).lower() == "debricked":
+                          isDebricked = 1
+                          
+                  if isDebricked == 0:
+                      vullist.append(vul)
+                      
+                  if len(vullist) == 90:
+                      #adding vulnerabilities to Security Hub
+                      send_finding_security_hub(vullist)
+                      vullist = []
+                      out_index += 1
+
+              # dump the last batch
+              if len(vullist) > 0:
+                  #adding vulnerabilities to Security Hub
+                  send_finding_security_hub(vullist)        
+              
+          def lambda_handler(event, context):
+              # Lambda entrypoint 
+              try:
+                  logger.info("Starting function...")
+                  parsed_json = parse_json(event)
+                  return process_message(parsed_json)
+              except Exception as error:
+                  logger.error("Error {}".format(error))
+                  raise
+
+          def remove_html_tags(text):
+              # Remove html tags from a string
+              clean = re.compile('<.*?>')
+              return re.sub(clean, '', text)
+
+          def parse_json(event):
+              # parsing json
+              try:
+                  d1 = json.dumps(event)
+                  json_data = json.loads(d1)
+                  return json_data
+              except Exception as err:
+                  logger.error("Error parsing json: {}".format(err))
+                  raise
+                  
+      Description: Fortify Parser for AWS security hub.
+      FunctionName: fortify-aws-security-hub-parser
+      Handler: index.lambda_handler
+      Role: !GetAtt FortifyParserLambdaRole.Arn
+      Runtime: python3.11
+      MemorySize: 128
+      Timeout: 300
+
+  ### IAM Roles for the stack
+  FortifyParserLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: Fortify-Policy-SecurityHubParserLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - securityhub:*
+            - iam:CreateServiceLinkedRole
+            - guardduty:GetDetector
+            - guardduty:ListDetectors
+            - inspector2:BatchGetAccountStatus
+            Resource: '*'
+  CodeBuildServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 'sts:AssumeRole'
+            Principal:
+              Service: codebuild.amazonaws.com
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess'
+  CleanupBucketOnDeleteLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: FoD-CICD-CleanupBucketOnDeleteLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            - s3:*
+            Resource: '*'
+          - Effect: Deny
+            Action:
+            - s3:DeleteBucket
+            Resource: '*'
+  CodePipelineServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 'sts:AssumeRole'
+            Principal:
+              Service: codepipeline.amazonaws.com
+      Policies:
+        - PolicyName: FoD-CICD-CodePipelineService
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'codecommit:CancelUploadArchive'
+                  - 'codecommit:GetBranch'
+                  - 'codecommit:GetCommit'
+                  - 'codecommit:GetUploadArchiveStatus'
+                  - 'codecommit:UploadArchive'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'codedeploy:CreateDeployment'
+                  - 'codedeploy:GetApplicationRevision'
+                  - 'codedeploy:GetDeployment'
+                  - 'codedeploy:GetDeploymentConfig'
+                  - 'codedeploy:RegisterApplicationRevision'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'codebuild:BatchGetBuilds'
+                  - 'codebuild:StartBuild'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'devicefarm:ListProjects'
+                  - 'devicefarm:ListDevicePools'
+                  - 'devicefarm:GetRun'
+                  - 'devicefarm:GetUpload'
+                  - 'devicefarm:CreateUpload'
+                  - 'devicefarm:ScheduleRun'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'lambda:InvokeFunction'
+                  - 'lambda:ListFunctions'
+                  - 'lambda:CreateFunction'
+                  - 'lambda:UpdateFunctionConfiguration'
+                  - 'lambda:UpdateFunctionCode'
+                  - 'lambda:TagResource'
+                  - 'lambda:PublishVersion'
+                  - 'lambda:GetFunctionConfiguration'
+                  - 'lambda:GetFunction'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'iam:PassRole'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'elasticbeanstalk:*'
+                  - 'ec2:*'
+                  - 'elasticloadbalancing:*'
+                  - 'autoscaling:*'
+                  - 'cloudwatch:*'
+                  - 's3:*'
+                  - 'sns:*'
+                  - 'cloudformation:*'
+                  - 'rds:*'
+                  - 'sqs:*'
+                  - 'ecs:*'
+                  - 'logs:*'
+                  - 'kms:*'
+                  - 'ecr:*'
+                Resource: '*'
