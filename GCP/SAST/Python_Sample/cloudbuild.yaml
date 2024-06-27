@@ -8,10 +8,11 @@
 #   - $$FCLI_DEFAULT_SSC_URL
 #   - $$SSC_APP_VERSION_ID
 # ******* FOR FOD ************
+#   - $$FCLI_DEFAULT_FOD_URL
+#   - $$FCLI_DEFAULT_FOD_USER
+#   - $$FCLI_DEFAULT_FOD_PASSWORD
+#   - $$FCLI_DEFAULT_FOD_TENANT
 #   - $$FOD_RELEASE_ID
-#   - $$FOD_USER
-#   - $$FOD_PAT
-#   - $$FOD_TENANT
 steps:
 - name: 'python:3.9'
   args: ['python', '-m', 'pip', 'install', '-r', 'requirements.txt', '--user']
@@ -28,12 +29,10 @@ steps:
   #                                                 #
   ###################################################
   args: ['bash', './fortify_sast_fod_template.bash']
-  secretEnv: ['FOD_RELEASE_ID', 'FOD_USER', 'FOD_PAT', 'FOD_TENANT', 'FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN', 'FCLI_DEFAULT_SSC_USER', 'FCLI_DEFAULT_SSC_PASSWORD', 'FCLI_DEFAULT_SSC_CI_TOKEN', 'FCLI_DEFAULT_SSC_URL'] 
+  secretEnv: ['FCLI_DEFAULT_FOD_URL', 'FCLI_DEFAULT_FOD_USER', 'FCLI_DEFAULT_FOD_PASSWORD', 'FCLI_DEFAULT_FOD_TENANT', 'FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN', 'FCLI_DEFAULT_SSC_USER', 'FCLI_DEFAULT_SSC_PASSWORD', 'FCLI_DEFAULT_SSC_CI_TOKEN', 'FCLI_DEFAULT_SSC_URL'] 
+
   env:
     - 'SSC_APP_VERSION_ID=${_SSC_APP_VERSION_ID}'
-    - 'SC_SAST_SENSOR_VERSION=22.2'  
-    - 'FOD_URL=https://ams.fortify.com' 
-    - 'FOD_API_URL=https://api.ams.fortify.com' 
-    - 'FOD_UPLOADER_OPTS=-ep 2 -pp 0 -I 1 -apf' 
-    - 'FOD_NOTES=Triggered by GCP Pipeline'     
+    - 'SC_SAST_SENSOR_VERSION=24.2'
+    - 'FOD_RELEASE_ID=${_FOD_RELEASE_ID}'   
 timeout: 2400s

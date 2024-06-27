@@ -6,14 +6,16 @@ shell: bash
 env:
   # these are local variables to the build config
   variables:
+    "JAVA_HOME" : "/usr/lib64/graalvm/graalvm-java17"
   # the value of a vaultVariable is the secret-id (in OCI ID format) stored in the OCI Vault service
   # you can then access the value of that secret in your build_spec.yaml commands
   vaultVariables:
     # Use below variables for FORTIFY ON DEMAND integration
-    FOD_TENANT: ocid1.vaultsecret.oc1.XXXXXXX           # TENANT ID
-    FOD_USER: ocid1.vaultsecret.oc1.XXXXXXX			    # FOD USER KEY
-    FOD_PWD: ocid1.vaultsecret.oc1.XXXXXXX			    # FOD PAT
-    FOD_RELEASE_ID: ocid1.vaultsecret.oc1.XXXXXXX	    # FOD APPLICATION BASED RELEASE ID  
+    FCLI_DEFAULT_FOD_TENANT: ocid1.vaultsecret.oc1.XXXXXXX           # TENANT ID
+    FCLI_DEFAULT_FOD_USER: ocid1.vaultsecret.oc1.XXXXXXX			 # FOD USER KEY
+    FCLI_DEFAULT_FOD_PASSWORD: ocid1.vaultsecret.oc1.XXXXXXX		 # FOD PAT
+    FCLI_DEFAULT_FOD_URL: ocid.vaultsecret.oc1.XXXXXXX		         # FOD URL
+    FOD_RELEASE_ID: ocid1.vaultsecret.oc1.XXXXXXX	                 # FOD APPLICATION BASED RELEASE ID  
     # Use below variables for FORTIFY SCANCENTRAL integration
     FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN: ocid1.vaultsecret.oc1.XXXXXXX       # SCANCENTRAL CLIENT AUTH TOKEN FOR HANDSHAKE
     FCLI_DEFAULT_SSC_USER: ocid1.vaultsecret.oc1.XXXXXXX                        # SSC USERNAME
@@ -28,10 +30,13 @@ steps:
     name: "Install Prereqs"
     command: |
       java -version
-      yum install -y java-11-openjdk-devel
-      alternatives --display java
-      alternatives --set java /usr/lib/jvm/java-11-openjdk-11.0.18.0.10-1.el7_9.x86_64/bin/java
-      java -version
+      yum -y install graalvm-17-native-image
+      export PATH=$JAVA_HOME/bin:$PATH
+      
+      #yum install -y java-11-openjdk-devel
+      #alternatives --display java
+      #alternatives --set java /usr/lib/jvm/java-11-openjdk-11.0.18.0.10-1.el7_9.x86_64/bin/java
+      #java -version
       
       # install Maven
       yum install maven
