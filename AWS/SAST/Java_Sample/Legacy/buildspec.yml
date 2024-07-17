@@ -3,10 +3,11 @@ env:
   parameter-store:
       ###############################################################
       #          INTEGRATE FORTIFY ON DEMAND                        #
-        FOD_RELEASE_ID: "/fod/releaseid"
-        FOD_TENANT: "/fod/tenant"
-        FOD_USER: "/fod/user"
-        FOD_PAT: "/fod/pat"  
+        FOD_RELEASE_ID_LOCAL: "/fod/releaseid"
+        FCLI_DEFAULT_FOD_TENANT_LOCAL: "/fod/tenant"
+        FCLI_DEFAULT_FOD_URL_LOCAL: "/fod/url"
+        FCLI_DEFAULT_FOD_CLIENT_ID_LOCAL: "/fod/client_id"
+        FCLI_DEFAULT_FOD_CLIENT_SECRET_LOCAL: "/fod/client_secret" 
       ###############################################################
       #           INTEGRATE FORTIFY SCANCENTRAL                     #
         FCLI_DEFAULT_SC_SAST_CLIENT_AUTH_TOKEN: "/fortify/client_auth_token"
@@ -18,10 +19,10 @@ env:
 phases:
   install:
     runtime-versions:
-      java: corretto11
+      java: corretto11corretto17
     commands:
       # Upgrade AWS CLI to the latest version
-      - pip install --upgrade awscli
+      #- pip install --upgrade awscli
   pre_build:
     commands:
       #- mvn clean compile test
@@ -31,9 +32,6 @@ phases:
       - mvn package
   post_build:
     commands:
-      # Do not remove this statement. This command is required for AWS CodeStar projects.
-      # Update the AWS Partition, AWS Region, account ID and project ID in the project ARN in template-configuration.json file so AWS CloudFormation can tag project resources.
-      - sed -i.bak 's/\$PARTITION\$/'${PARTITION}'/g;s/\$AWS_REGION\$/'${AWS_REGION}'/g;s/\$ACCOUNT_ID\$/'${ACCOUNT_ID}'/g;s/\$PROJECT_ID\$/'${PROJECT_ID}'/g' template-configuration.json
       ###################################################
       #             INTEGRATE FORTIFY SAST              #
       #                                                 #
@@ -49,8 +47,4 @@ phases:
       ###################################################
 artifacts:
   files:
-    - 'appspec.yml'
-    - 'template.yml'
-    - 'scripts/*'
-    - 'target/ROOT.war'
-    - 'template-configuration.json'
+    - 'target/*.war'
