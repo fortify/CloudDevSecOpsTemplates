@@ -33,17 +33,11 @@ def send_finding_security_hub(allVulList):
         # create ISO 8601 timestamp
         try:
             vul['AwsAccountId'] = awsAccount
-            vul['Types'] = ['Software and Configuration Checks/Vulnerabilities/CVE']
-            vul['Severity']['Normalized'] = round(float(vul['Severity']['Normalized']))
-            vul['ProductArn'] = "arn:aws:securityhub:"+ awsRegion +":" + awsAccount +":product/"+ awsAccount +"/default"
-            vul['GeneratorId'] = "arn:aws:securityhub:"+ awsRegion +":" + awsAccount +":product/"+ awsAccount +"/default"
-            vul['Resources']['Region'] = awsRegion
-            vul['Resources']['Details'] = vul['Resources']['details']
-            del vul['Resources']['details']
-            vul['Resources']['Details']['Other']['APPLICATION'] = str(vul['Resources']['Details']['Other']['APPLICATION'])
-            vul['Resources']['Details']['Other']['LINENUMBER'] = str(vul['Resources']['Details']['Other']['LINENUMBER'])
-            vul['Resources'] = [vul['Resources']]
-            vul['CreatedAt'] = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+            #vul['Types'] = ['Software and Configuration Checks/Vulnerabilities/CVE']
+            #vul['ProductArn'] = "arn:aws:securityhub:"+ awsRegion +":" + awsAccount +":product/"+ awsAccount +"/default"
+            #vul['GeneratorId'] = "arn:aws:securityhub:"+ awsRegion +":" + awsAccount +":product/"+ awsAccount +"/default"
+            #vul['Resources']['Region'] = awsRegion
+            #vul['CreatedAt'] = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
             vul['UpdatedAt'] = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
             #print(vul)
         except Exception as e:
