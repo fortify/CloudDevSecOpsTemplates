@@ -9,10 +9,11 @@ env:
    
 		**INTEGRATE FORTIFY ON DEMAND**
 		````
-		FOD_RELEASE_ID: "/fod/releaseid"
-		FOD_TENANT: "/fod/tenant"
-		FOD_USER: "/fod/user"
-		FOD_PAT: "/fod/pat"  
+        FOD_RELEASE_ID_LOCAL: "/fod/releaseid"
+        FCLI_DEFAULT_FOD_TENANT_LOCAL: "/fod/tenant"
+        FCLI_DEFAULT_FOD_URL_LOCAL: "/fod/url"
+        FCLI_DEFAULT_FOD_CLIENT_ID_LOCAL: "/fod/client_id"
+        FCLI_DEFAULT_FOD_CLIENT_SECRET_LOCAL: "/fod/client_secret" 
 		````
    - Add below parameters in parameter-store for ScanCentral template	
    
