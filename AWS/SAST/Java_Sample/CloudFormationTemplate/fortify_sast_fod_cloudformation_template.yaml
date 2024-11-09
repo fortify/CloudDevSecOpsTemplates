@@ -387,7 +387,7 @@ Resources:
       # FunctionName: lambda_function
       Handler: index.lambda_handler
       Role : !GetAtt CleanupBucketOnDeleteLambdaRole.Arn
-      Runtime: python3.7
+      Runtime: python3.11
       MemorySize: 128
       Timeout: 60  
   #### Custom Lambda function for Fortify Parser
